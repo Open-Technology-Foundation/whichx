@@ -1,7 +1,7 @@
 #!/bin/bash
 # whichx - Robust Bash implementation of the 'which' command
 set -euo pipefail
-shopt -s inherit_errexit shift_verbose extglob nullglob
+shopt -s extglob nullglob
 
 declare -r VERSION='2.0'
 #shellcheck disable=SC2155
