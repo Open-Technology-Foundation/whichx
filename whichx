@@ -1,0 +1,167 @@
+#!/bin/bash
+# whichx - Robust Bash implementation of the 'which' command
+set -euo pipefail
+shopt -s inherit_errexit shift_verbose extglob nullglob
+
+declare -r VERSION='2.0'
+#shellcheck disable=SC2155
+declare -r SCRIPT_NAME=$(basename -- "$(readlink -en -- "$0")")
+# Exit codes
+declare -ir EXIT_SUCCESS=0 EXIT_NOT_FOUND=1 EXIT_USAGE_ERROR=2 EXIT_INVALID_OPTION=22
+
+declare -i opt_all=0 opt_canonical=0 opt_silent=0
+declare -a targets=()
+
+# Usage documentation
+usage() {
+  cat <<EOT
+$SCRIPT_NAME $VERSION - Locate a command
+
+Search the PATH environment variable and display the location of any
+matching executable/s.
+
+An updated version of the 'which' program. Functionally fully
+compatible with 'which', but much more robust.
+
+whichx returns the pathnames of the files (or links) that would be executed
+in the current environment, had its arguments been given as commands in a
+strictly POSIX-conformant shell. It does this by searching the PATH for
+executable files matching the names of the arguments.
+
+If any filename is not found, returns error.
+
+Usage: $SCRIPT_NAME [Options] filename ...
+
+Options:
+  -a|--all         Print all matching pathnames of each argument
+  -c|--canonical   Print canonical paths using readlink
+  -s|--silent      Silent mode - no error output, exit 0 if all found, 1 otherwise
+  -V|--version     Print version
+  -h|--help        This help message
+
+Examples:
+  # Find location of ls command
+  $SCRIPT_NAME ls
+
+  # Find all python executables in PATH
+  $SCRIPT_NAME -a python
+
+  # Show canonical path for vim
+  $SCRIPT_NAME -c /usr/bin/vim
+
+  # Check multiple commands
+  $SCRIPT_NAME ls cat grep
+
+  # Silent mode - check if commands exist without output
+  $SCRIPT_NAME -s command && echo "Found" || echo "Not found"
+
+Exit codes:
+  0  All specified commands found
+  1  One or more commands not found
+  2  Usage error (missing arguments)
+  22 Invalid option
+
+Dependencies: bash, readlink
+
+See also: which
+EOT
+  exit $EXIT_SUCCESS
+}
+
+# Print error messages to stderr
+error() {
+  ((opt_silent)) || printf '%s: %s\n' "$SCRIPT_NAME" "$*" >&2
+}
+
+# Get canonical path if requested
+get_path() {
+  local -- path="$1"
+
+  if ((opt_canonical)); then
+    if ! readlink -f "$path" 2>/dev/null; then
+      error "Cannot resolve canonical path for '$path'"
+      return 1
+    fi
+  else
+    ((opt_silent)) || printf '%s\n' "$path"
+  fi
+  return 0
+}
+
+# Search for executable in PATH
+search_executable() {
+  local -- program="$1" path full_path
+  local -i found=0
+
+  # Handle absolute or relative paths (containing '/')
+  if [[ $program == */* ]]; then
+    if [[ -f $program && -x $program ]]; then
+      get_path "$program" && found=1
+    fi
+    return $found
+  fi
+
+  # Parse PATH and search each directory
+  local IFS=':'
+  local -a path_dirs
+  read -ra path_dirs <<< "${PATH:-}"
+
+  for path in "${path_dirs[@]}"; do
+    # Handle empty PATH elements (treat as current directory)
+    [[ -n $path ]] || path='.'
+
+    full_path="$path/$program"
+
+    # Check if file exists and is executable
+    if [[ -f $full_path && -x $full_path ]]; then
+      if get_path "$full_path"; then
+        found=1
+        # If not showing all matches, stop after first match
+        ((opt_all)) || break
+      fi
+    fi
+  done
+
+  return $((found ? 0 : 1))
+}
+
+main() {
+  local -i overall_exit_code=$EXIT_SUCCESS
+  local -- target
+
+  # Parse command line arguments
+  while (($#)); do
+    case $1 in
+      -a|--all)       opt_all=1 ;;
+      -c|--canonical) opt_canonical=1 ;;
+      -s|--silent)    opt_silent=1 ;;
+      -V|--version)   printf '%s %s\n' "$SCRIPT_NAME" "$VERSION"; exit $EXIT_SUCCESS ;;
+      -h|--help)      usage ;;
+      --)             shift; targets+=("$@"); break ;;
+      -[acsVh]*) #shellcheck disable=SC2046 #split up single options
+                      set -- '' $(printf -- "-%c " $(grep -o . <<<"${1:1}")) "${@:2}" ;;
+      -*)             error "Invalid option '$1'"; exit $EXIT_INVALID_OPTION ;;
+      *)              targets+=("$1") ;;
+    esac
+    shift
+  done
+
+  # Validate that we have at least one target
+  if ((${#targets[@]} == 0)); then
+    ((opt_silent)) || error "No arguments provided. See $SCRIPT_NAME --help"
+    exit $EXIT_USAGE_ERROR
+  fi
+
+  # Search for each target
+  for target in "${targets[@]}"; do
+    if ! search_executable "$target"; then
+      overall_exit_code=$EXIT_NOT_FOUND
+    fi
+  done 
+
+  exit $overall_exit_code
+}
+
+main "$@"
+
+#fin
