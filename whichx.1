@@ -1,0 +1,166 @@
+.TH WHICHX 1 "2025" "whichx 2.0" "User Commands"
+.SH NAME
+whichx \- locate a command (enhanced which replacement)
+.SH SYNOPSIS
+.B whichx
+[\fIOPTIONS\fR]
+.IR filename ...
+.SH DESCRIPTION
+.B whichx
+is a robust bash implementation of the classic Unix
+.BR which (1)
+command and serves as a fully-compatible drop-in replacement.
+.PP
+.B whichx
+returns the pathnames of the files (or links) which would be executed
+in the current environment, had its arguments been given as commands in a
+strictly POSIX-conformant shell. It does this by searching the
+.B PATH
+for executable files matching the names of the arguments.
+.PP
+While functionally compatible with the standard
+.BR which (1)
+command,
+.B whichx
+provides more robust error handling, better POSIX compliance, and
+additional features for modern shell scripting.
+.SH OPTIONS
+.TP
+.BR \-a ", " \-\-all
+Print all matching pathnames of each argument. By default, only the first
+match in PATH is displayed.
+.TP
+.BR \-c ", " \-\-canonical
+Print canonical paths using
+.BR realpath (1).
+This resolves all symbolic links and relative path components.
+.TP
+.BR \-s ", " \-\-silent
+Silent mode. No output is produced; only the exit code indicates success
+or failure. Exit 0 if all executables are found, 1 otherwise.
+.TP
+.BR \-V ", " \-\-version
+Print version information and exit.
+.TP
+.BR \-h ", " \-\-help
+Display help message and exit.
+.SH EXIT STATUS
+.TP
+.B 0
+All specified commands found successfully.
+.TP
+.B 1
+One or more commands not found.
+.TP
+.B 2
+Usage error (no arguments provided).
+.TP
+.B 22
+Invalid command-line option.
+.SH EXAMPLES
+.PP
+Find the location of the ls command:
+.PP
+.nf
+.RS
+whichx ls
+.RE
+.fi
+.PP
+Find all python executables in PATH:
+.PP
+.nf
+.RS
+whichx \-a python
+.RE
+.fi
+.PP
+Show canonical path for vim (following symlinks):
+.PP
+.nf
+.RS
+whichx \-c vim
+.RE
+.fi
+.PP
+Check multiple commands at once:
+.PP
+.nf
+.RS
+whichx ls cat grep
+.RE
+.fi
+.PP
+Silent mode - check if commands exist without output:
+.PP
+.nf
+.RS
+if whichx \-s docker; then
+    echo "Docker is installed"
+else
+    echo "Docker not found"
+fi
+.RE
+.fi
+.PP
+Use in script pre-flight checks:
+.PP
+.nf
+.RS
+#!/bin/bash
+# Check for required dependencies
+if ! whichx \-s gcc make cmake; then
+    echo "Error: Missing required tools" >&2
+    exit 1
+fi
+.RE
+.fi
+.SH IMPLEMENTATION DETAILS
+.PP
+.B whichx
+properly handles empty PATH elements by treating them as the current
+directory (.), ensuring strict POSIX compliance.
+.PP
+Combined short options are supported (e.g.,
+.I \-ac
+is equivalent to
+.I "\-a \-c"
+).
+.PP
+The exit code is only successful (0) if
+.I all
+specified targets are found.
+.SH DEPENDENCIES
+.TP
+.B bash
+Version 4.3 or later
+.TP
+.BR realpath (1)
+Required for canonical path resolution (
+.B \-c
+option)
+.TP
+.BR grep (1)
+Used for option parsing
+.SH ENVIRONMENT
+.TP
+.B PATH
+Colon-separated list of directories to search for executables.
+.SH SEE ALSO
+.BR which (1),
+.BR whereis (1),
+.BR type (1),
+.BR command (1),
+.BR realpath (1),
+.BR bash (1)
+.PP
+Project repository: https://github.com/Open-Technology-Foundation/whichx
+.PP
+Bash Coding Standard: https://github.com/Open-Technology-Foundation/bash-coding-standard
+.SH AUTHOR
+Gary Dean
+.SH COPYRIGHT
+Copyright \(co 2025 Gary Dean.
+.PP
+This is free software; see the source for copying conditions. There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.

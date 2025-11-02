@@ -34,7 +34,7 @@ Usage: $SCRIPT_NAME [Options] filename ...
 
 Options:
   -a|--all         Print all matching pathnames of each argument
-  -c|--canonical   Print canonical paths using readlink
+  -c|--canonical   Print canonical paths using realpath
   -s|--silent      Silent mode - no error output, exit 0 if all found, 1 otherwise
   -V|--version     Print version
   -h|--help        This help message
@@ -61,7 +61,7 @@ Exit codes:
   2  Usage error (missing arguments)
   22 Invalid option
 
-Dependencies: bash, readlink
+Dependencies: bash, realpath
 
 See also: which
 EOT
@@ -75,7 +75,7 @@ get_path() {
   local -- path=$1
 
   if ((opt_canonical)); then
-    if ! readlink -f "$path" 2>/dev/null; then
+    if ! realpath -- "$path" 2>/dev/null; then
       error "Cannot resolve canonical path for ${path@Q}"
       return 1
     fi
