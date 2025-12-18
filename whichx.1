@@ -1,151 +1,224 @@
 .TH WHICHX 1 "2025" "whichx 2.0" "User Commands"
 .SH NAME
-whichx \- locate a command (enhanced which replacement)
+whichx \- locate a command (robust, POSIX-compliant which replacement)
 .SH SYNOPSIS
 .B whichx
 [\fIOPTIONS\fR]
-.IR filename ...
+.IR filename " ..."
 .SH DESCRIPTION
 .B whichx
-is a robust bash implementation of the classic Unix
+is a robust, POSIX-compliant drop-in replacement for the classic Unix
 .BR which (1)
-command and serves as a fully-compatible drop-in replacement.
+command. It locates executables in your PATH with enhanced features
+while maintaining full compatibility with standard
+.BR which .
 .PP
 .B whichx
-returns the pathnames of the files (or links) which would be executed
-in the current environment, had its arguments been given as commands in a
-strictly POSIX-conformant shell. It does this by searching the
+returns the pathnames of files (or links) that would be executed in the
+current environment, had its arguments been given as commands in a
+strictly POSIX-conformant shell. It searches the
 .B PATH
-for executable files matching the names of the arguments.
-.PP
-While functionally compatible with the standard
-.BR which (1)
-command,
-.B whichx
-provides more robust error handling, better POSIX compliance, and
-additional features for modern shell scripting.
+environment variable for executable files matching the names of the arguments.
+.SS Key Features
+.IP \(bu 2
+Predictable exit codes (0, 1, 2, 22) for reliable scripting
+.IP \(bu 2
+Canonical path resolution to follow symlinks
+.IP \(bu 2
+True silent mode for clean conditionals
+.IP \(bu 2
+POSIX-compliant PATH handling including empty elements
+.IP \(bu 2
+Combined short options support (\-ac equivalent to \-a \-c)
+.IP \(bu 2
+Consistent behavior across all Unix/Linux systems
 .SH OPTIONS
+Options can be combined: \fB\-ac\fR is equivalent to \fB\-a \-c\fR.
 .TP
 .BR \-a ", " \-\-all
-Print all matching pathnames of each argument. By default, only the first
-match in PATH is displayed.
+Print all matching pathnames of each argument, not just the first match.
+By default, only the first match in PATH is displayed.
 .TP
 .BR \-c ", " \-\-canonical
-Print canonical paths using
+Resolve symlinks and print canonical paths using
 .BR realpath (1).
-This resolves all symbolic links and relative path components.
+This resolves all symbolic links and relative path components to show
+the actual executable location.
 .TP
 .BR \-s ", " \-\-silent
-Silent mode. No output is produced; only the exit code indicates success
-or failure. Exit 0 if all executables are found, 1 otherwise.
+Silent mode. Suppress all output; communicate via exit code only.
+Useful for conditional checks in scripts.
 .TP
 .BR \-V ", " \-\-version
 Print version information and exit.
 .TP
 .BR \-h ", " \-\-help
 Display help message and exit.
-.SH EXIT STATUS
 .TP
-.B 0
+.B \-\-
+End of options. All subsequent arguments are treated as filenames,
+even if they begin with a hyphen.
+.SH EXIT STATUS
+.B whichx
+uses specific exit codes to allow scripts to distinguish between
+different error conditions:
+.TP
+.B 0 (EXIT_SUCCESS)
 All specified commands found successfully.
 .TP
-.B 1
+.B 1 (EXIT_NOT_FOUND)
 One or more commands not found.
 .TP
-.B 2
+.B 2 (EXIT_USAGE_ERROR)
 Usage error (no arguments provided).
 .TP
-.B 22
+.B 22 (EXIT_INVALID_OPTION / EINVAL)
 Invalid command-line option.
 .SH EXAMPLES
-.PP
+.SS Basic Usage
 Find the location of the ls command:
 .PP
-.nf
 .RS
-whichx ls
-.RE
+.nf
+$ whichx ls
+/usr/bin/ls
 .fi
-.PP
-Find all python executables in PATH:
-.PP
-.nf
-.RS
-whichx \-a python
 .RE
-.fi
 .PP
-Show canonical path for vim (following symlinks):
+Find multiple commands at once:
 .PP
-.nf
 .RS
-whichx \-c vim
+.nf
+$ whichx ls cat grep
+/usr/bin/ls
+/usr/bin/cat
+/usr/bin/grep
+.fi
 .RE
-.fi
+.SS Find All Matches (\-a)
+Show all executables in PATH, not just the first:
 .PP
-Check multiple commands at once:
-.PP
-.nf
 .RS
-whichx ls cat grep
+.nf
+$ whichx \-a python3
+/usr/bin/python3
+/usr/local/bin/python3
+.fi
 .RE
-.fi
+.SS Canonical Paths (\-c)
+Resolve symlinks to find the actual executable:
 .PP
-Silent mode - check if commands exist without output:
-.PP
-.nf
 .RS
+.nf
+$ whichx python3
+/usr/bin/python3
+
+$ whichx \-c python3
+/usr/bin/python3.12
+.fi
+.RE
+.SS Combined Options
+Options can be combined for convenience:
+.PP
+.RS
+.nf
+$ whichx \-ac python3
+/usr/bin/python3.12
+/usr/local/bin/python3.11
+.fi
+.RE
+.SS Silent Mode (\-s)
+Use in scripts for conditional checks:
+.PP
+.RS
+.nf
+# Simple conditional
 if whichx \-s docker; then
-    echo "Docker is installed"
-else
-    echo "Docker not found"
+    echo "Docker is available"
 fi
-.RE
-.fi
-.PP
-Use in script pre-flight checks:
-.PP
-.nf
-.RS
-#!/bin/bash
-# Check for required dependencies
-if ! whichx \-s gcc make cmake; then
-    echo "Error: Missing required tools" >&2
+
+# Pre-flight dependency check
+whichx \-s gcc make cmake || {
+    echo "Missing build tools" >&2
     exit 1
-fi
-.RE
+}
 .fi
-.SH IMPLEMENTATION DETAILS
+.RE
+.SS Direct Path Verification
+Verify a specific path is executable:
 .PP
+.RS
+.nf
+$ whichx /usr/local/bin/my\-script
+/usr/local/bin/my-script
+
+$ whichx ./local\-tool
+./local-tool
+.fi
+.RE
+.SH POSIX COMPLIANCE
+.SS Empty PATH Elements
+Per POSIX, an empty element in PATH means the current directory.
 .B whichx
-properly handles empty PATH elements by treating them as the current
-directory (.), ensuring strict POSIX compliance.
+handles this correctly, unlike many
+.BR which (1)
+implementations:
 .PP
-Combined short options are supported (e.g.,
-.I \-ac
-is equivalent to
-.I "\-a \-c"
-).
-.PP
-The exit code is only successful (0) if
-.I all
-specified targets are found.
-.SH DEPENDENCIES
-.TP
-.B bash
-Version 4.3 or later
-.TP
-.BR realpath (1)
-Required for canonical path resolution (
-.B \-c
-option)
-.TP
-.BR grep (1)
-Used for option parsing
+.RS
+.nf
+# Leading colon = empty first element = current directory
+$ PATH=":/usr/bin" whichx ./my\-script
+./my-script
+
+# Double colon = empty middle element
+$ PATH="/usr/bin::/usr/local/bin" whichx ls
+/usr/bin/ls
+.fi
+.RE
+.SS Search Order
+.B whichx
+searches PATH directories in order and returns the first match
+(unless
+.B \-a
+is specified), exactly as a POSIX shell would resolve the command.
+.SH COMPARISON WITH STANDARD WHICH
+.TS
+l l l.
+Feature	which	whichx
+_
+Find executables	Yes	Yes
+Multiple targets	Yes	Yes
+Show all matches	Yes	Yes
+Canonical paths	No	Yes
+True silent mode	Partial	Yes
+Specific exit codes	No	Yes
+POSIX PATH compliance	Varies	Yes
+Combined short options	Varies	Yes
+.TE
 .SH ENVIRONMENT
 .TP
 .B PATH
 Colon-separated list of directories to search for executables.
+Empty elements are treated as the current directory per POSIX.
+.SH FILES
+.TP
+.I /usr/local/bin/whichx
+Default installation location.
+.TP
+.I /usr/local/bin/which
+Symlink to whichx (created during installation).
+.SH DEPENDENCIES
+.TP
+.B bash
+Version 4.3 or later (uses modern bash features).
+.TP
+.BR realpath (1)
+Required for canonical path resolution
+.RB ( \-c
+option).
+.TP
+.BR grep (1)
+Used for combined option parsing.
 .SH SEE ALSO
 .BR which (1),
 .BR whereis (1),
@@ -153,14 +226,22 @@ Colon-separated list of directories to search for executables.
 .BR command (1),
 .BR realpath (1),
 .BR bash (1)
-.PP
-Project repository: https://github.com/Open-Technology-Foundation/whichx
-.PP
-Bash Coding Standard: https://github.com/Open-Technology-Foundation/bash-coding-standard
+.SH STANDARDS
+.B whichx
+follows POSIX guidelines for PATH searching, including proper handling
+of empty PATH elements which many implementations get wrong.
+.SH BUGS
+Report bugs at: https://github.com/Open-Technology-Foundation/whichx/issues
 .SH AUTHOR
-Gary Dean
+Gary Dean <https://github.com/Open-Technology-Foundation>
 .SH COPYRIGHT
 Copyright \(co 2025 Gary Dean.
 .PP
-This is free software; see the source for copying conditions. There is NO
-warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+License GPLv3+: GNU GPL version 3 or later.
+.br
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.
+.SH LINKS
+Project repository: https://github.com/Open-Technology-Foundation/whichx
+.PP
+Bash Coding Standard: https://github.com/Open-Technology-Foundation/bash-coding-standard
