@@ -64,6 +64,9 @@ sudo make install PREFIX=/opt/local
 ```bash
 sudo install -m 755 whichx /usr/local/bin/
 sudo ln -sf whichx /usr/local/bin/which
+# Optional: install man pages
+sudo install -m 644 whichx.1 /usr/local/share/man/man1/
+sudo ln -sf whichx.1 /usr/local/share/man/man1/which.1
 ```
 
 ### Uninstall
