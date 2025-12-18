@@ -4,6 +4,10 @@
 
 Version 2.0 | [License: GPL-3.0](LICENSE) | Bash 4.3+
 
+```bash
+git clone https://github.com/Open-Technology-Foundation/whichx.git && cd whichx && sudo make install
+```
+
 ---
 
 ## Why whichx?
