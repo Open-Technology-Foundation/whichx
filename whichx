@@ -1,11 +1,14 @@
 #!/bin/bash
 # whichx - Robust Bash implementation of the 'which' command
 set -euo pipefail
-shopt -s extglob nullglob
+shopt -s inherit_errexit shift_verbose extglob nullglob
 
 declare -r VERSION='2.0'
 #shellcheck disable=SC2155
-declare -r SCRIPT_NAME=$(basename -- "$(realpath -e -- "$0")")
+declare -r SCRIPT_PATH=$(realpath -e -- "$0")
+#shellcheck disable=SC2034  # SCRIPT_DIR reserved for BCS compliance
+declare -r SCRIPT_DIR=${SCRIPT_PATH%/*}
+declare -r SCRIPT_NAME=${SCRIPT_PATH##*/}
 # Exit codes
 declare -ir EXIT_SUCCESS=0 EXIT_NOT_FOUND=1 EXIT_USAGE_ERROR=2 EXIT_INVALID_OPTION=22
 
@@ -95,7 +98,7 @@ search_executable() {
     if [[ -f $program && -x $program ]]; then
       get_path "$program" && found=1
     fi
-    return $found
+    return $((found ? 0 : 1))
   fi
 
   # Parse PATH and search each directory
