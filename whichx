@@ -1,5 +1,7 @@
 #!/bin/bash
-# whichx - Robust Bash implementation of the 'which' command
+# whichx - Robust, POSIX-compliant replacement for the 'which' command
+# Locates executables in PATH with enhanced features: canonical paths,
+# silent mode, specific exit codes, and proper empty PATH element handling.
 set -euo pipefail
 shopt -s inherit_errexit shift_verbose extglob nullglob
 
@@ -15,65 +17,53 @@ declare -ir EXIT_SUCCESS=0 EXIT_NOT_FOUND=1 EXIT_USAGE_ERROR=2 EXIT_INVALID_OPTI
 declare -i opt_all=0 opt_canonical=0 opt_silent=0
 declare -a targets=()
 
-# Usage documentation
+# Display usage documentation
 show_help() {
   cat <<EOT
 $SCRIPT_NAME $VERSION - Locate a command
 
-Search the PATH environment variable and display the location of any
-matching executable/s.
+A robust, POSIX-compliant drop-in replacement for 'which'. Searches the PATH
+environment variable and displays the location of matching executables.
 
-An updated version of the 'which' program. Functionally fully
-compatible with 'which', but much more robust.
+Returns the pathnames of files (or links) that would be executed in the
+current environment, had its arguments been given as commands in a strictly
+POSIX-conformant shell.
 
-whichx returns the pathnames of the files (or links) that would be executed
-in the current environment, had its arguments been given as commands in a
-strictly POSIX-conformant shell. It does this by searching the PATH for
-executable files matching the names of the arguments.
-
-If any filename is not found, returns error.
-
-Usage: $SCRIPT_NAME [Options] filename ...
+Usage: $SCRIPT_NAME [OPTIONS] filename ...
 
 Options:
-  -a|--all         Print all matching pathnames of each argument
-  -c|--canonical   Print canonical paths using realpath
-  -s|--silent      Silent mode - no error output, exit 0 if all found, 1 otherwise
-  -V|--version     Print version
-  -h|--help        This help message
+  -a, --all        Print all matching pathnames (not just first match)
+  -c, --canonical  Resolve symlinks and print canonical paths via realpath
+  -s, --silent     Suppress all output; communicate via exit code only
+  -V, --version    Print version and exit
+  -h, --help       Display this help and exit
+
+Exit Codes:
+  0   All specified commands found
+  1   One or more commands not found
+  2   Usage error (no arguments provided)
+  22  Invalid option (EINVAL)
 
 Examples:
-  # Find location of ls command
-  $SCRIPT_NAME ls
+  $SCRIPT_NAME ls                    # Find location of ls
+  $SCRIPT_NAME ls cat grep           # Find multiple commands
+  $SCRIPT_NAME -a python3            # Show all python3 in PATH
+  $SCRIPT_NAME -c vim                # Canonical path (resolve symlinks)
+  $SCRIPT_NAME -ac python3           # Combined: all matches, canonical
+  $SCRIPT_NAME -s gcc make || exit 1 # Pre-flight check in scripts
 
-  # Find all python executables in PATH
-  $SCRIPT_NAME -a python
+Requirements:
+  bash 4.3+, realpath, grep
 
-  # Show canonical path for vim
-  $SCRIPT_NAME -c /usr/bin/vim
-
-  # Check multiple commands
-  $SCRIPT_NAME ls cat grep
-
-  # Silent mode - check if commands exist without output
-  $SCRIPT_NAME -s command && echo "Found" || echo "Not found"
-
-Exit codes:
-  0  All specified commands found
-  1  One or more commands not found
-  2  Usage error (missing arguments)
-  22 Invalid option
-
-Dependencies: bash, realpath
-
-See also: which
+See also: which(1), whereis(1), type(1), command(1)
 EOT
 }
 
-# Print error messages to stderr
+# Output error message to stderr (suppressed in silent mode)
 error() { ((opt_silent)) || >&2 printf '%s: error: %s\n' "$SCRIPT_NAME" "$*"; }
 
-# Get canonical path if requested
+# Output path to stdout, optionally resolving to canonical form
+# Returns: 0 on success, 1 if realpath fails (canonical mode only)
 get_path() {
   local -- path=$1
 
@@ -88,12 +78,14 @@ get_path() {
   return 0
 }
 
-# Search for executable in PATH
+# Search for executable in PATH directories
+# Handles both simple names (searched in PATH) and path-containing names (used directly)
+# Returns: 0 if found, 1 if not found
 search_executable() {
   local -- program="$1" path full_path
   local -i found=0
 
-  # Handle absolute or relative paths (containing '/')
+  # Path-containing names bypass PATH search (absolute/relative paths)
   if [[ $program == */* ]]; then
     if [[ -f $program && -x $program ]]; then
       get_path "$program" && found=1
@@ -101,13 +93,13 @@ search_executable() {
     return $((found ? 0 : 1))
   fi
 
-  # Parse PATH and search each directory
+  # Split PATH into array using colon delimiter (POSIX standard)
   local IFS=':'
   local -a path_dirs
   read -ra path_dirs <<< "${PATH:-}"
 
   for path in "${path_dirs[@]}"; do
-    # Handle empty PATH elements (treat as current directory)
+    # Empty PATH elements mean current directory per POSIX (e.g., PATH=":/usr/bin")
     [[ -n $path ]] || path='.'
 
     full_path="$path/$program"
@@ -125,11 +117,12 @@ search_executable() {
   return $((found ? 0 : 1))
 }
 
+# Main entry point: parse arguments, search for each target, return aggregate status
 main() {
   local -i overall_exit_code=$EXIT_SUCCESS
   local -- target
 
-  # Parse command line arguments
+  # Argument parsing with combined short option support (-ac → -a -c)
   while (($#)); do
     case $1 in
       -a|--all)       opt_all=1 ;;
@@ -137,8 +130,8 @@ main() {
       -s|--silent)    opt_silent=1 ;;
       -V|--version)   echo "$SCRIPT_NAME $VERSION"; exit $EXIT_SUCCESS ;;
       -h|--help)      show_help; exit $EXIT_SUCCESS ;;
-      --)             shift; targets+=("$@"); break ;;
-      -[acsVh]*) #shellcheck disable=SC2046 #split up single options
+      --)             shift; targets+=("$@"); break ;;  # End of options
+      -[acsVh]*) #shellcheck disable=SC2046  # Split combined options: -ac → -a -c
                       set -- '' $(printf -- '-%c ' $(grep -o . <<<"${1:1}")) "${@:2}" ;;
       -*)             error "Invalid option ${1@Q}"; exit $EXIT_INVALID_OPTION ;;
       *)              targets+=("$1") ;;
@@ -146,18 +139,18 @@ main() {
     shift
   done
 
-  # Validate that we have at least one target
+  # Require at least one target filename
   if ((${#targets[@]} == 0)); then
     ((opt_silent)) || error "No arguments provided. See $SCRIPT_NAME --help"
     exit $EXIT_USAGE_ERROR
   fi
 
-  # Search for each target
+  # Search each target; overall success only if ALL targets found
   for target in "${targets[@]}"; do
     if ! search_executable "$target"; then
       overall_exit_code=$EXIT_NOT_FOUND
     fi
-  done 
+  done
 
   exit $overall_exit_code
 }
