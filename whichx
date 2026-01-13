@@ -9,8 +9,6 @@ declare -r VERSION=2.0
 
 #shellcheck disable=SC2155
 declare -r SCRIPT_PATH=$(realpath -e -- "$0")
-#shellcheck disable=SC2034  # SCRIPT_DIR reserved for BCS compliance
-declare -r SCRIPT_DIR=${SCRIPT_PATH%/*}
 declare -r SCRIPT_NAME=${SCRIPT_PATH##*/}
 
 # Exit codes
@@ -21,7 +19,7 @@ declare -a targets=()
 
 # Display usage documentation
 show_help() {
-  cat <<EOT
+  cat <<HELP
 $SCRIPT_NAME $VERSION - Locate a command
 
 A robust, POSIX-compliant drop-in replacement for 'which'. Searches the PATH
@@ -58,7 +56,7 @@ Requirements:
   bash 4.3+, realpath, grep
 
 See also: which(1), whereis(1), type(1), command(1)
-EOT
+HELP
 }
 
 # Output error message to stderr (suppressed in silent mode)
@@ -84,19 +82,21 @@ get_path() {
 # Handles both simple names (searched in PATH) and path-containing names (used directly)
 # Returns: 0 if found, 1 if not found
 search_executable() {
-  local -- program=$1 path full_path
+  local -- program=$1
+  local -- path full_path
   local -i found=0
 
   # Path-containing names bypass PATH search (absolute/relative paths)
   if [[ $program == */* ]]; then
     if [[ -f $program && -x $program ]]; then
+      #shellcheck disable=SC2015
       get_path "$program" && found=1 ||:
     fi
     return $((found ? 0 : 1))
   fi
 
   # Split PATH into array using colon delimiter (POSIX standard)
-  local IFS=':'
+  local -- IFS=':'
   local -a path_dirs
   read -ra path_dirs <<< "${PATH:-}"
 
@@ -104,7 +104,7 @@ search_executable() {
     # Empty PATH elements mean current directory per POSIX (e.g., PATH=":/usr/bin")
     [[ -n $path ]] || path='.'
 
-    full_path="$path/$program"
+    full_path="$path"/"$program"
 
     # Check if file exists and is executable
     if [[ -f $full_path && -x $full_path ]]; then
@@ -127,16 +127,30 @@ main() {
   # Argument parsing with combined short option support (-ac → -a -c)
   while (($#)); do
     case $1 in
-      -a|--all)       opt_all=1 ;;
-      -c|--canonical) opt_canonical=1 ;;
-      -s|--silent)    opt_silent=1 ;;
-      -V|--version)   echo "$SCRIPT_NAME $VERSION"; return $EXIT_SUCCESS ;;
-      -h|--help)      show_help; return $EXIT_SUCCESS ;;
-      --)             shift; targets+=("$@"); break ;;  # End of options
+      -a|--all)       opt_all=1
+                      ;;
+      -c|--canonical) opt_canonical=1
+                      ;;
+      -s|--silent)    opt_silent=1
+                      ;;
+      -V|--version)   echo "$SCRIPT_NAME $VERSION"
+                      return $EXIT_SUCCESS
+                      ;;
+      -h|--help)      show_help
+                      return $EXIT_SUCCESS
+                      ;;
+      --)             shift
+                      targets+=("$@")
+                      break
+                      ;;  # End of options
       -[acsVh]*) #shellcheck disable=SC2046  # Split combined options: -ac → -a -c
-                      set -- '' $(printf -- '-%c ' $(grep -o . <<<"${1:1}")) "${@:2}" ;;
-      -*)             error "Invalid option ${1@Q}"; exit $EXIT_INVALID_OPTION ;;
-      *)              targets+=("$1") ;;
+                      set -- '' $(printf -- '-%c ' $(grep -o . <<<"${1:1}")) "${@:2}"
+                      ;;
+      -*)             error "Invalid option ${1@Q}"
+                      exit $EXIT_INVALID_OPTION
+                      ;;
+      *)              targets+=("$1")
+                      ;;
     esac
     shift
   done
