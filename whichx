@@ -71,7 +71,7 @@ search_executable() {
   for path in "${path_dirs[@]}"; do
     [[ -n $path ]] || path='.'  # Empty element = cwd (POSIX)
 
-    full_path="${path%/}/$program"
+    full_path="${path%/}"/"$program"
 
     if [[ -f $full_path && -x $full_path ]]; then
       if get_path "$full_path"; then
