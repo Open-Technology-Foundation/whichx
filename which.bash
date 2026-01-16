@@ -1,0 +1,118 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2025 Indonesian Open Technology Foundation (admin@yatti.id)
+# which.bash - Sourceable which function for ~/.bashrc
+# Usage: source which.bash
+
+which() {
+  local -r VERSION=2.0
+  local -i opt_all=0 opt_canonical=0 opt_silent=0
+  local -i overall_rc=0 found=0
+  local -a targets=()
+  local target path full_path resolved
+  local -a path_dirs
+  local path_str
+
+  while (($#)); do
+    case $1 in
+      -a|--all)       opt_all=1 ;;
+      -c|--canonical) opt_canonical=1 ;;
+      -q|--quiet|-s|--silent)
+                      opt_silent=1 ;;
+      -V|--version)   printf 'which %s\n' "$VERSION"
+                      return 0 ;;
+      -h|--help)      declare -f which_help >/dev/null && which_help || \
+                        printf 'Usage: which [-acqsVh] [--] command ...\n'
+                      return 0 ;;
+      --)             shift; targets+=("$@"); break ;;
+      -[acqsVh]?*)    set -- "${1:0:2}" "-${1:2}" "${@:2}"; continue ;;
+      -*)             ((opt_silent)) || printf >&2 'which: error: Illegal option %s\n' "${1@Q}"
+                      return 22 ;;
+      *)              targets+=("$1") ;;
+    esac
+    shift
+  done
+
+  if ((${#targets[@]} == 0)); then
+    ((opt_silent)) || printf >&2 'which: error: No arguments. See which --help\n'
+    return 2
+  fi
+
+  for target in "${targets[@]}"; do
+    found=0
+
+    # Paths containing / bypass PATH search
+    if [[ $target == */* ]]; then
+      if [[ -f $target && -x $target ]]; then
+        if ((opt_canonical)); then
+          if resolved=$(realpath -- "$target" 2>/dev/null) || \
+             resolved=$(readlink -f -- "$target" 2>/dev/null); then
+            ((opt_silent)) || printf '%s\n' "$resolved"
+            found=1
+          else
+            ((opt_silent)) || printf >&2 'which: error: Cannot resolve canonical path for %s\n' "${target@Q}"
+          fi
+        else
+          ((opt_silent)) || printf '%s\n' "$target"
+          found=1
+        fi
+      fi
+      ((found)) || overall_rc=1
+      continue
+    fi
+
+    # Search PATH
+    path_str=${PATH:-}
+    [[ $path_str == *: ]] && path_str+='.'
+    IFS=':' read -ra path_dirs <<< "$path_str"
+
+    for path in "${path_dirs[@]}"; do
+      [[ -n $path ]] || path='.'
+      full_path="${path%/}/$target"
+
+      if [[ -f $full_path && -x $full_path ]]; then
+        if ((opt_canonical)); then
+          if resolved=$(realpath -- "$full_path" 2>/dev/null) || \
+             resolved=$(readlink -f -- "$full_path" 2>/dev/null); then
+            ((opt_silent)) || printf '%s\n' "$resolved"
+            found=1
+          else
+            ((opt_silent)) || printf >&2 'which: error: Cannot resolve canonical path for %s\n' "${full_path@Q}"
+          fi
+        else
+          ((opt_silent)) || printf '%s\n' "$full_path"
+          found=1
+        fi
+        ((opt_all)) || break
+      fi
+    done
+
+    ((found)) || overall_rc=1
+  done
+
+  return $overall_rc
+}
+declare -fx which
+
+[[ "${BASH_SOURCE[0]}" == "$0" ]] || return 0
+
+which_help() {
+        cat <<'HELP'
+which 2.0 - Locate executables in PATH
+
+Usage: which [OPTIONS] [--] command ...
+
+Options:
+  -a, --all        Print all matches, not just first
+  -c, --canonical  Resolve symlinks via realpath/readlink
+  -q, --quiet      No output, exit code only
+  -s, --silent     Same as -q
+  -V, --version    Print version
+  -h, --help       This help
+
+Exit: 0=found, 1=not found, 2=no args, 22=bad option
+HELP
+}
+
+which "$@"
+#fin

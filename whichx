@@ -1,7 +1,7 @@
 #!/bin/bash
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2025 Indonesian Open Technology Foundation (admin@yatti.id)
-# whichx - Locate executables in PATH
+# whichx - Locate executables in PATH, 'which' replacement
 set -euo pipefail
 shopt -s inherit_errexit
 
@@ -85,7 +85,7 @@ search_executable() {
   return $((found ? 0 : 1))
 }
 
-main() {
+which() {
   local -i overall_exit_code=0
   local -a targets=()
   local -- target
@@ -120,5 +120,5 @@ main() {
   exit $overall_exit_code
 }
 
-main "$@"
+which "$@"
 #fin

@@ -3,22 +3,26 @@
 PREFIX ?= /usr/local
 BINDIR = $(PREFIX)/bin
 MANDIR = $(PREFIX)/share/man/man1
+PROFILED = /etc/profile.d
 SCRIPT = whichx
+SOURCEABLE = which.bash
 SYMLINK = which
 MANPAGE = whichx.1
 
-.PHONY: all help install uninstall test shellcheck functional benchmark
+.PHONY: all help install uninstall install-sourceable uninstall-sourceable test shellcheck functional benchmark
 
 all: help
 
 help:
 	@echo "whichx Makefile targets:"
-	@echo "  make install    - Install whichx, manpage, and create which symlink"
-	@echo "  make uninstall  - Remove whichx, manpage, and which symlink"
-	@echo "  make test       - Run shellcheck + functional tests"
-	@echo "  make shellcheck - Run shellcheck only"
-	@echo "  make functional - Run functional tests only"
-	@echo "  make benchmark  - Run performance benchmarks vs old.which"
+	@echo "  make install            - Install whichx, manpage, and which symlink"
+	@echo "  make uninstall          - Remove whichx, manpage, and which symlink"
+	@echo "  make install-sourceable - Install which.bash to /etc/profile.d (12x faster)"
+	@echo "  make uninstall-sourceable - Remove which.bash from /etc/profile.d"
+	@echo "  make test               - Run shellcheck + functional tests"
+	@echo "  make shellcheck         - Run shellcheck only"
+	@echo "  make functional         - Run functional tests only"
+	@echo "  make benchmark          - Run performance benchmarks"
 	@echo ""
 	@echo "Variables:"
 	@echo "  PREFIX=$(PREFIX)  - Installation prefix (default: /usr/local)"
@@ -49,11 +53,23 @@ uninstall:
 	rm -f $(MANDIR)/$(SYMLINK).1
 	@echo "Uninstallation complete."
 
+install-sourceable:
+	@echo "Installing $(SOURCEABLE) to $(PROFILED)..."
+	install -d $(PROFILED)
+	install -m 644 $(SOURCEABLE) $(PROFILED)/$(SOURCEABLE)
+	@echo "Installation complete: $(PROFILED)/$(SOURCEABLE)"
+	@echo "New shells will have which() function (12x faster than subprocess)"
+
+uninstall-sourceable:
+	@echo "Removing $(SOURCEABLE) from $(PROFILED)..."
+	rm -f $(PROFILED)/$(SOURCEABLE)
+	@echo "Uninstallation complete."
+
 test: shellcheck functional
 
 shellcheck:
 	@echo "Running shellcheck..."
-	shellcheck $(SCRIPT) tests/*.sh
+	shellcheck $(SCRIPT) $(SOURCEABLE) tests/*.sh
 	@echo "Shellcheck passed."
 
 functional:
