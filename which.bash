@@ -22,7 +22,7 @@ which() {
       -V|--version)   printf 'which %s\n' "$VERSION"
                       return 0 ;;
       -h|--help)      declare -f which_help >/dev/null && which_help || \
-                        printf 'Usage: which [-acqsVh] [--] command ...\n'
+                          printf 'Usage: which [-acqsVh] [--] command ...\nman which for help.'
                       return 0 ;;
       --)             shift; targets+=("$@"); break ;;
       -[acqsVh]?*)    set -- "${1:0:2}" "-${1:2}" "${@:2}"; continue ;;
