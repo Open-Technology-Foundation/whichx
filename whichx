@@ -1,9 +1,9 @@
 #!/bin/bash
-# whichx - Robust, POSIX-compliant replacement for the 'which' command
-# Locates executables in PATH with enhanced features: canonical paths,
-# silent mode, specific exit codes, and proper empty PATH element handling.
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2025 Open Technology Foundation
+# whichx - Locate executable commands in PATH
 set -euo pipefail
-shopt -s inherit_errexit extglob nullglob
+shopt -s inherit_errexit
 
 declare -r VERSION=2.0
 declare -r SCRIPT_NAME=${0##*/}
@@ -18,8 +18,8 @@ show_help() {
   cat <<HELP
 $SCRIPT_NAME $VERSION - Locate an executable command
 
-A robust, POSIX-compliant drop-in replacement for 'which'. Searches the PATH
-environment variable and displays the location of matching executables.
+A robust drop-in replacement for 'which' with POSIX-compatible behavior.
+Searches PATH and displays the location of matching executables.
 
 Returns the pathnames of files (or links) that would be executed in the
 current environment, had its arguments been given as commands in a strictly
@@ -90,12 +90,11 @@ search_executable() {
   local -- IFS=':'
   local -a path_dirs
   read -ra path_dirs <<< "${PATH:-}"
-  local -- path
   for path in "${path_dirs[@]}"; do
     # Empty PATH elements mean current directory per POSIX (e.g., PATH=":/usr/bin")
     [[ -n $path ]] || path='.'
 
-    full_path="$path"/"$program"
+    full_path="${path%/}/$program"
 
     # Check if file exists and is executable
     if [[ -f $full_path && -x $full_path ]]; then
