@@ -1,10 +1,10 @@
 #!/bin/bash
 # SPDX-License-Identifier: GPL-3.0-or-later
-# Performance benchmark: whichx vs old.which
+# Performance benchmark: which vs old.which
 set -euo pipefail
 
 SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
-WHICHX="$SCRIPT_DIR/../whichx"
+WHICH="$SCRIPT_DIR/../which"
 OLDWHICH="$SCRIPT_DIR/../old.which"
 
 if [[ ! -x "$OLDWHICH" ]]; then
@@ -79,53 +79,53 @@ setup() {
 }
 
 run_benchmarks() {
-  echo "# whichx vs old.which benchmark"
+  echo "# which vs old.which benchmark"
   echo "#"
-  printf '%-25s %25s  %25s  %s\n' "Test" "whichx" "old.which" "Winner"
+  printf '%-25s %25s  %25s  %s\n' "Test" "which" "old.which" "Winner"
   echo "# $(printf '%.0s-' {1..95})"
 
   local -i wx_ms ow_ms iters
 
   # Test 1: Single command lookup
   iters=1000
-  wx_ms=$(benchmark $iters "$WHICHX" ls)
+  wx_ms=$(benchmark $iters "$WHICH" ls)
   ow_ms=$(benchmark $iters "$OLDWHICH" ls)
   result "Single lookup" "$wx_ms" "$ow_ms" "$iters"
 
   # Test 2: Multiple commands
   iters=200
-  wx_ms=$(benchmark $iters "$WHICHX" ls cat grep sed awk)
+  wx_ms=$(benchmark $iters "$WHICH" ls cat grep sed awk)
   ow_ms=$(benchmark $iters "$OLDWHICH" ls cat grep sed awk)
   result "5 commands" "$wx_ms" "$ow_ms" "$iters"
 
   # Test 3: -a all matches
   iters=500
-  wx_ms=$(PATH="$LARGEPATH" benchmark $iters "$WHICHX" -a testcmd)
+  wx_ms=$(PATH="$LARGEPATH" benchmark $iters "$WHICH" -a testcmd)
   ow_ms=$(PATH="$LARGEPATH" benchmark $iters "$OLDWHICH" -a testcmd)
   result "-a (50 matches)" "$wx_ms" "$ow_ms" "$iters"
 
   # Test 4: Large PATH
   iters=500
-  wx_ms=$(PATH="$LARGEPATH" benchmark $iters "$WHICHX" testcmd)
+  wx_ms=$(PATH="$LARGEPATH" benchmark $iters "$WHICH" testcmd)
   ow_ms=$(PATH="$LARGEPATH" benchmark $iters "$OLDWHICH" testcmd)
   result "Large PATH (50 dirs)" "$wx_ms" "$ow_ms" "$iters"
 
   # Test 5: Not found
   iters=1000
-  wx_ms=$(benchmark $iters "$WHICHX" nonexistent_command_xyz)
+  wx_ms=$(benchmark $iters "$WHICH" nonexistent_command_xyz)
   ow_ms=$(benchmark $iters "$OLDWHICH" nonexistent_command_xyz)
   result "Not found" "$wx_ms" "$ow_ms" "$iters"
 
-  # Test 6: Quiet mode (whichx only, compare -s vs normal)
+  # Test 6: Quiet mode (which only, compare -s vs normal)
   iters=1000
-  wx_ms=$(benchmark $iters "$WHICHX" -q ls)
-  ow_ms=$(benchmark $iters "$WHICHX" ls)
-  result "-q vs normal (whichx)" "$wx_ms" "$ow_ms" "$iters"
+  wx_ms=$(benchmark $iters "$WHICH" -q ls)
+  ow_ms=$(benchmark $iters "$WHICH" ls)
+  result "-q vs normal (which)" "$wx_ms" "$ow_ms" "$iters"
 
   echo "#"
   echo "# Notes:"
   echo "#   - old.which runs under /bin/sh (likely dash)"
-  echo "#   - whichx is bash 4.4+ with more features"
+  echo "#   - which is bash 4.4+ with more features"
   echo "#   - Performance difference is negligible for real-world use"
 }
 

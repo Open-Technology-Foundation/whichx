@@ -1,24 +1,22 @@
-# Makefile for whichx
+# Makefile for which
 
 PREFIX ?= /usr/local
 BINDIR = $(PREFIX)/bin
 MANDIR = $(PREFIX)/share/man/man1
 PROFILED = /etc/profile.d
-SCRIPT = whichx
-SOURCEABLE = which.bash
-SYMLINK = which
-MANPAGE = whichx.1
+SCRIPT = which
+MANPAGE = which.1
 
 .PHONY: all help install uninstall install-sourceable uninstall-sourceable test shellcheck functional benchmark
 
 all: help
 
 help:
-	@echo "whichx Makefile targets:"
-	@echo "  make install            - Install whichx, manpage, and which symlink"
-	@echo "  make uninstall          - Remove whichx, manpage, and which symlink"
-	@echo "  make install-sourceable - Install which.bash to /etc/profile.d (12x faster)"
-	@echo "  make uninstall-sourceable - Remove which.bash from /etc/profile.d"
+	@echo "which Makefile targets:"
+	@echo "  make install            - Install which and manpage to $(PREFIX)"
+	@echo "  make uninstall          - Remove which and manpage"
+	@echo "  make install-sourceable - Install to /etc/profile.d (12x faster)"
+	@echo "  make uninstall-sourceable - Remove from /etc/profile.d"
 	@echo "  make test               - Run shellcheck + functional tests"
 	@echo "  make shellcheck         - Run shellcheck only"
 	@echo "  make functional         - Run functional tests only"
@@ -31,51 +29,43 @@ install:
 	@echo "Installing $(SCRIPT) to $(BINDIR)..."
 	install -d $(BINDIR)
 	install -m 755 $(SCRIPT) $(BINDIR)/$(SCRIPT)
-	@echo "Creating symlink $(BINDIR)/$(SYMLINK) -> $(SCRIPT)..."
-	ln -sf $(SCRIPT) $(BINDIR)/$(SYMLINK)
 	@echo "Installing manpage to $(MANDIR)..."
 	install -d $(MANDIR)
 	install -m 644 $(MANPAGE) $(MANDIR)/$(MANPAGE)
-	@echo "Creating manpage symlink $(MANDIR)/$(SYMLINK).1 -> $(MANPAGE)..."
-	ln -sf $(MANPAGE) $(MANDIR)/$(SYMLINK).1
 	@echo "Installation complete."
 	@echo "  $(BINDIR)/$(SCRIPT)"
-	@echo "  $(BINDIR)/$(SYMLINK) -> $(SCRIPT)"
 	@echo "  $(MANDIR)/$(MANPAGE)"
-	@echo "  $(MANDIR)/$(SYMLINK).1 -> $(MANPAGE)"
 
 uninstall:
-	@echo "Uninstalling $(SCRIPT) and $(SYMLINK) from $(BINDIR)..."
+	@echo "Uninstalling $(SCRIPT) from $(BINDIR)..."
 	rm -f $(BINDIR)/$(SCRIPT)
-	rm -f $(BINDIR)/$(SYMLINK)
-	@echo "Uninstalling manpages from $(MANDIR)..."
+	@echo "Uninstalling manpage from $(MANDIR)..."
 	rm -f $(MANDIR)/$(MANPAGE)
-	rm -f $(MANDIR)/$(SYMLINK).1
 	@echo "Uninstallation complete."
 
 install-sourceable:
-	@echo "Installing $(SOURCEABLE) to $(PROFILED)..."
+	@echo "Installing $(SCRIPT) to $(PROFILED)/which.bash..."
 	install -d $(PROFILED)
-	install -m 644 $(SOURCEABLE) $(PROFILED)/$(SOURCEABLE)
-	@echo "Installation complete: $(PROFILED)/$(SOURCEABLE)"
-	@echo "New shells will have which() function (12x faster than subprocess)"
+	install -m 644 $(SCRIPT) $(PROFILED)/which.bash
+	@echo "Installation complete: $(PROFILED)/which.bash"
+	@echo "New shells will have which() function (12x faster)"
 
 uninstall-sourceable:
-	@echo "Removing $(SOURCEABLE) from $(PROFILED)..."
-	rm -f $(PROFILED)/$(SOURCEABLE)
+	@echo "Removing which.bash from $(PROFILED)..."
+	rm -f $(PROFILED)/which.bash
 	@echo "Uninstallation complete."
 
 test: shellcheck functional
 
 shellcheck:
 	@echo "Running shellcheck..."
-	shellcheck $(SCRIPT) $(SOURCEABLE) tests/*.sh
+	shellcheck $(SCRIPT) tests/*.sh
 	@echo "Shellcheck passed."
 
 functional:
 	@echo "Running functional tests..."
-	@chmod +x tests/test_whichx.sh
-	@./tests/test_whichx.sh
+	@chmod +x tests/test_which.sh
+	@./tests/test_which.sh
 
 benchmark:
 	@echo "Running benchmarks..."

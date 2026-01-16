@@ -1,10 +1,10 @@
 #!/bin/bash
 # SPDX-License-Identifier: GPL-3.0-or-later
-# Comprehensive test suite for whichx
+# Comprehensive test suite for which
 set -uo pipefail  # Note: no -e, we handle exit codes manually
 
 SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
-WHICHX="$SCRIPT_DIR/../whichx"
+WHICH="$SCRIPT_DIR/../which"
 
 declare -i tests=0 passed=0 failed=0
 
@@ -84,7 +84,7 @@ trap teardown EXIT
 # === TESTS ===
 
 run_tests() {
-  echo "# whichx test suite"
+  echo "# which test suite"
 
   # --- BASIC OPERATIONS ---
   echo "# Basic operations"
@@ -92,110 +92,110 @@ run_tests() {
   local out rc
 
   # Find existing command
-  out=$("$WHICHX" ls 2>&1); rc=$?
+  out=$("$WHICH" ls 2>&1); rc=$?
   assert_exit 0 $rc "basic: find ls"
   assert_contains "/ls" "$out" "basic: output contains /ls"
 
   # Find non-existent command
-  out=$("$WHICHX" nonexistent_cmd_xyz 2>&1); rc=$?
+  out=$("$WHICH" nonexistent_cmd_xyz 2>&1); rc=$?
   assert_exit 1 $rc "basic: nonexistent returns 1"
 
   # Multiple commands (all exist)
-  out=$("$WHICHX" ls cat 2>&1); rc=$?
+  out=$("$WHICH" ls cat 2>&1); rc=$?
   assert_exit 0 $rc "basic: multiple existing"
 
   # Multiple commands (mixed)
-  out=$("$WHICHX" ls nonexistent_xyz cat 2>&1); rc=$?
+  out=$("$WHICH" ls nonexistent_xyz cat 2>&1); rc=$?
   assert_exit 1 $rc "basic: mixed returns 1"
 
   # Multiple commands (none exist)
-  out=$("$WHICHX" nope1 nope2 nope3 2>&1); rc=$?
+  out=$("$WHICH" nope1 nope2 nope3 2>&1); rc=$?
   assert_exit 1 $rc "basic: all nonexistent returns 1"
 
   # --- OPTIONS ---
   echo "# Options"
 
   # -a / --all
-  out=$(PATH="$TESTPATH" "$WHICHX" -a testcmd 2>&1); rc=$?
+  out=$(PATH="$TESTPATH" "$WHICH" -a testcmd 2>&1); rc=$?
   assert_exit 0 $rc "opt: -a finds command"
   local lines
   lines=$(echo "$out" | wc -l)
   if [[ $lines -ge 2 ]]; then ok "opt: -a returns multiple matches"; else not_ok "opt: -a returns multiple matches (got $lines)"; fi
 
-  out=$(PATH="$TESTPATH" "$WHICHX" --all testcmd 2>&1); rc=$?
+  out=$(PATH="$TESTPATH" "$WHICH" --all testcmd 2>&1); rc=$?
   assert_exit 0 $rc "opt: --all works"
 
   # -c / --canonical
-  out=$(PATH="$TESTPATH" "$WHICHX" -c symcmd 2>&1); rc=$?
+  out=$(PATH="$TESTPATH" "$WHICH" -c symcmd 2>&1); rc=$?
   assert_exit 0 $rc "opt: -c finds symlink"
   assert_contains "testcmd" "$out" "opt: -c resolves to real path"
 
-  out=$(PATH="$TESTPATH" "$WHICHX" --canonical symcmd 2>&1); rc=$?
+  out=$(PATH="$TESTPATH" "$WHICH" --canonical symcmd 2>&1); rc=$?
   assert_exit 0 $rc "opt: --canonical works"
 
   # -q / --quiet
-  out=$(PATH="$TESTPATH" "$WHICHX" -q testcmd 2>&1); rc=$?
+  out=$(PATH="$TESTPATH" "$WHICH" -q testcmd 2>&1); rc=$?
   assert_exit 0 $rc "opt: -q returns 0 when found"
   assert_empty "$out" "opt: -q produces no output"
 
-  out=$(PATH="$TESTPATH" "$WHICHX" -q nonexistent 2>&1); rc=$?
+  out=$(PATH="$TESTPATH" "$WHICH" -q nonexistent 2>&1); rc=$?
   assert_exit 1 $rc "opt: -q returns 1 when not found"
 
-  out=$(PATH="$TESTPATH" "$WHICHX" --quiet testcmd 2>&1); rc=$?
+  out=$(PATH="$TESTPATH" "$WHICH" --quiet testcmd 2>&1); rc=$?
   assert_empty "$out" "opt: --quiet produces no output"
 
   # -s / --silent (alias)
-  out=$(PATH="$TESTPATH" "$WHICHX" -s testcmd 2>&1); rc=$?
+  out=$(PATH="$TESTPATH" "$WHICH" -s testcmd 2>&1); rc=$?
   assert_exit 0 $rc "opt: -s works"
   assert_empty "$out" "opt: -s produces no output"
 
-  out=$(PATH="$TESTPATH" "$WHICHX" --silent testcmd 2>&1); rc=$?
+  out=$(PATH="$TESTPATH" "$WHICH" --silent testcmd 2>&1); rc=$?
   assert_empty "$out" "opt: --silent works"
 
   # -V / --version
-  out=$("$WHICHX" -V 2>&1); rc=$?
+  out=$("$WHICH" -V 2>&1); rc=$?
   assert_exit 0 $rc "opt: -V returns 0"
-  assert_contains "whichx" "$out" "opt: -V shows name"
+  assert_contains "which" "$out" "opt: -V shows name"
   assert_contains "2.0" "$out" "opt: -V shows version"
 
-  out=$("$WHICHX" --version 2>&1); rc=$?
+  out=$("$WHICH" --version 2>&1); rc=$?
   assert_exit 0 $rc "opt: --version works"
 
   # -h / --help
-  out=$("$WHICHX" -h 2>&1); rc=$?
+  out=$("$WHICH" -h 2>&1); rc=$?
   assert_exit 0 $rc "opt: -h returns 0"
   assert_contains "Usage:" "$out" "opt: -h shows usage"
 
-  out=$("$WHICHX" --help 2>&1); rc=$?
+  out=$("$WHICH" --help 2>&1); rc=$?
   assert_exit 0 $rc "opt: --help works"
 
   # Combined options
-  out=$(PATH="$TESTPATH" "$WHICHX" -ac symcmd 2>&1); rc=$?
+  out=$(PATH="$TESTPATH" "$WHICH" -ac symcmd 2>&1); rc=$?
   assert_exit 0 $rc "opt: -ac combined works"
 
-  out=$(PATH="$TESTPATH" "$WHICHX" -qa testcmd 2>&1); rc=$?
+  out=$(PATH="$TESTPATH" "$WHICH" -qa testcmd 2>&1); rc=$?
   assert_exit 0 $rc "opt: -qa combined works"
   assert_empty "$out" "opt: -qa still quiet"
 
-  out=$(PATH="$TESTPATH" "$WHICHX" -aqs testcmd 2>&1); rc=$?
+  out=$(PATH="$TESTPATH" "$WHICH" -aqs testcmd 2>&1); rc=$?
   assert_exit 0 $rc "opt: -aqs triple combined"
 
   # --- EXIT CODES ---
   echo "# Exit codes"
 
-  "$WHICHX" ls >/dev/null 2>&1; rc=$?
+  "$WHICH" ls >/dev/null 2>&1; rc=$?
   assert_exit 0 $rc "exit: 0 when found"
 
-  "$WHICHX" nonexistent_xyz >/dev/null 2>&1; rc=$?
+  "$WHICH" nonexistent_xyz >/dev/null 2>&1; rc=$?
   assert_exit 1 $rc "exit: 1 when not found"
 
-  "$WHICHX" 2>/dev/null; rc=$?
+  "$WHICH" 2>/dev/null; rc=$?
   assert_exit 2 $rc "exit: 2 when no args"
 
-  "$WHICHX" -z 2>/dev/null; rc=$?
+  "$WHICH" -z 2>/dev/null; rc=$?
   assert_exit 22 $rc "exit: 22 for invalid option"
 
-  "$WHICHX" --badopt 2>/dev/null; rc=$?
+  "$WHICH" --badopt 2>/dev/null; rc=$?
   assert_exit 22 $rc "exit: 22 for invalid long option"
 
   # --- PATH HANDLING ---
@@ -203,33 +203,33 @@ run_tests() {
 
   # Leading colon (cwd first)
   pushd "$TESTDIR" >/dev/null || return 1
-  out=$(PATH=":$TESTDIR/bin1" "$WHICHX" cwdcmd 2>&1); rc=$?
+  out=$(PATH=":$TESTDIR/bin1" "$WHICH" cwdcmd 2>&1); rc=$?
   assert_exit 0 $rc "path: leading colon finds cwd"
   popd >/dev/null || return 1
 
   # Trailing colon (cwd last)
   pushd "$TESTDIR" >/dev/null || return 1
-  out=$(PATH="$TESTDIR/bin1:" "$WHICHX" cwdcmd 2>&1); rc=$?
+  out=$(PATH="$TESTDIR/bin1:" "$WHICH" cwdcmd 2>&1); rc=$?
   assert_exit 0 $rc "path: trailing colon finds cwd"
   popd >/dev/null || return 1
 
   # Double colon (cwd in middle)
   pushd "$TESTDIR" >/dev/null || return 1
-  out=$(PATH="$TESTDIR/bin1::$TESTDIR/bin2" "$WHICHX" cwdcmd 2>&1); rc=$?
+  out=$(PATH="$TESTDIR/bin1::$TESTDIR/bin2" "$WHICH" cwdcmd 2>&1); rc=$?
   assert_exit 0 $rc "path: double colon finds cwd"
   popd >/dev/null || return 1
 
   # Empty PATH
-  out=$(PATH="" "$WHICHX" ls 2>&1); rc=$?
+  out=$(PATH="" "$WHICH" ls 2>&1); rc=$?
   assert_exit 1 $rc "path: empty PATH returns 1"
 
   # PATH with non-existent directories
-  out=$(PATH="/nonexistent:$TESTDIR/bin1" "$WHICHX" testcmd 2>&1); rc=$?
+  out=$(PATH="/nonexistent:$TESTDIR/bin1" "$WHICH" testcmd 2>&1); rc=$?
   assert_exit 0 $rc "path: skips non-existent dirs"
 
   # Single dot in PATH
   pushd "$TESTDIR" >/dev/null || return 1
-  out=$(PATH="." "$WHICHX" cwdcmd 2>&1); rc=$?
+  out=$(PATH="." "$WHICH" cwdcmd 2>&1); rc=$?
   assert_exit 0 $rc "path: explicit dot works"
   popd >/dev/null || return 1
 
@@ -237,42 +237,42 @@ run_tests() {
   echo "# Input handling"
 
   # Absolute path
-  out=$("$WHICHX" /usr/bin/ls 2>&1); rc=$?
+  out=$("$WHICH" /usr/bin/ls 2>&1); rc=$?
   assert_exit 0 $rc "input: absolute path"
   assert_output "/usr/bin/ls" "$out" "input: absolute path output"
 
   # Relative path
   pushd "$TESTDIR" >/dev/null || return 1
-  out=$("$WHICHX" ./cwdcmd 2>&1); rc=$?
+  out=$("$WHICH" ./cwdcmd 2>&1); rc=$?
   assert_exit 0 $rc "input: relative path"
   popd >/dev/null || return 1
 
   # -- separator
-  out=$(PATH="$TESTPATH" "$WHICHX" -- testcmd 2>&1); rc=$?
+  out=$(PATH="$TESTPATH" "$WHICH" -- testcmd 2>&1); rc=$?
   assert_exit 0 $rc "input: -- separator"
 
   # Command starting with hyphen
-  out=$(PATH="$TESTPATH" "$WHICHX" -- -hyphen 2>&1); rc=$?
+  out=$(PATH="$TESTPATH" "$WHICH" -- -hyphen 2>&1); rc=$?
   assert_exit 0 $rc "input: hyphen command via --"
 
   # --- EDGE CASES ---
   echo "# Edge cases"
 
   # Non-executable not matched
-  out=$(PATH="$TESTPATH" "$WHICHX" noexec 2>&1); rc=$?
+  out=$(PATH="$TESTPATH" "$WHICH" noexec 2>&1); rc=$?
   assert_exit 1 $rc "edge: non-executable not matched"
 
   # Directory not matched
-  out=$(PATH="$TESTPATH" "$WHICHX" testdir 2>&1); rc=$?
+  out=$(PATH="$TESTPATH" "$WHICH" testdir 2>&1); rc=$?
   assert_exit 1 $rc "edge: directory not matched"
 
   # Multi-level symlink resolution
-  out=$(PATH="$TESTPATH" "$WHICHX" -c sym2cmd 2>&1); rc=$?
+  out=$(PATH="$TESTPATH" "$WHICH" -c sym2cmd 2>&1); rc=$?
   assert_exit 0 $rc "edge: multi-level symlink resolved"
   assert_contains "testcmd" "$out" "edge: resolves to final target"
 
   # Broken symlink with -c
-  out=$(PATH="$TESTPATH" "$WHICHX" brokensym 2>&1); rc=$?
+  out=$(PATH="$TESTPATH" "$WHICH" brokensym 2>&1); rc=$?
   assert_exit 1 $rc "edge: broken symlink not found (not executable)"
 
   # --- SUMMARY ---

@@ -1,4 +1,4 @@
-# whichx
+# which
 
 **Locate executables in PATH — robust `which` replacement**
 
@@ -10,22 +10,23 @@ git clone https://github.com/Open-Technology-Foundation/whichx.git && cd whichx 
 
 ---
 
-## Why whichx?
+## Why this which?
 
-Standard `which` varies across systems. `whichx` provides:
+Standard `which` varies across systems. This implementation provides:
 
 - **Predictable exit codes** (0, 1, 2, 22)
 - **Canonical path resolution** (`-c`)
 - **Silent mode** for scripting (`-q`/`-s`)
 - **POSIX-compliant PATH handling**
+- **Sourceable** for 12x faster interactive use
 
 ## Quick Start
 
 ```bash
-whichx python3              # Find python3
-whichx -a python3           # All matches in PATH
-whichx -c /usr/bin/python3  # Resolve symlinks
-whichx -q docker || exit 1  # Silent check
+which python3              # Find python3
+which -a python3           # All matches in PATH
+which -c /usr/bin/python3  # Resolve symlinks
+which -q docker || exit 1  # Silent check
 ```
 
 ---
@@ -38,12 +39,22 @@ cd whichx
 sudo make install
 ```
 
-Installs to `/usr/local/bin/whichx` with `which` symlink and man pages.
+Installs to `/usr/local/bin/which` with man page.
 
 ```bash
 sudo make install PREFIX=/opt  # Custom prefix
 sudo make uninstall            # Remove
 ```
+
+### Sourceable Installation (12x faster)
+
+For interactive shells, source the script instead of calling it as subprocess:
+
+```bash
+sudo make install-sourceable   # Installs to /etc/profile.d/which.bash
+```
+
+New shells will have the `which()` function loaded (~7500 ops/s vs ~600 ops/s).
 
 ### Requirements
 
@@ -55,7 +66,7 @@ sudo make uninstall            # Remove
 ## Usage
 
 ```
-whichx [OPTIONS] [--] command ...
+which [OPTIONS] [--] command ...
 ```
 
 ### Options
@@ -85,17 +96,17 @@ Options can be combined: `-ac` equals `-a -c`
 ## Examples
 
 ```bash
-$ whichx ls
+$ which ls
 /usr/bin/ls
 
-$ whichx -a python3
+$ which -a python3
 /usr/bin/python3
 /usr/local/bin/python3
 
-$ whichx -c python3
+$ which -c python3
 /usr/bin/python3.12
 
-$ whichx -q gcc make || echo "Missing tools"
+$ which -q gcc make || echo "Missing tools"
 ```
 
 ### Scripting
@@ -103,11 +114,11 @@ $ whichx -q gcc make || echo "Missing tools"
 ```bash
 # Pre-flight check
 for tool in git curl jq; do
-  whichx -q "$tool" || { echo "Missing: $tool" >&2; exit 1; }
+  which -q "$tool" || { echo "Missing: $tool" >&2; exit 1; }
 done
 
 # Tool selection
-PYTHON=$(whichx python3 2>/dev/null || whichx python)
+PYTHON=$(which python3 2>/dev/null || which python)
 "$PYTHON" script.py
 ```
 
@@ -118,8 +129,8 @@ PYTHON=$(whichx python3 2>/dev/null || whichx python)
 Empty PATH elements = current directory:
 
 ```bash
-PATH=":/usr/bin" whichx ./script   # Leading colon
-PATH="/usr/bin:" whichx ./script   # Trailing colon
+PATH=":/usr/bin" which ./script   # Leading colon
+PATH="/usr/bin:" which ./script   # Trailing colon
 ```
 
 ---
@@ -143,12 +154,14 @@ make benchmark    # performance comparison vs old.which
 
 ### Benchmark (vs debianutils which)
 
-| Test | whichx | old.which |
-|------|--------|-----------|
+| Test | which | old.which |
+|------|-------|-----------|
 | Single lookup | ~600 ops/s | ~1200 ops/s |
 | Large PATH | ~500 ops/s | ~1200 ops/s |
+| Sourced | ~7500 ops/s | N/A |
 
-whichx is ~2x slower (bash vs dash) but sub-millisecond per operation.
+Subprocess is ~2x slower (bash vs dash) but sub-millisecond per operation.
+Sourced function is 12x faster than subprocess.
 
 ---
 
@@ -156,11 +169,11 @@ whichx is ~2x slower (bash vs dash) but sub-millisecond per operation.
 
 ```
 whichx/
-├── whichx            # Main executable
-├── whichx.1          # Man page
+├── which             # Main script (executable + sourceable)
+├── which.1           # Man page
 ├── Makefile
 ├── tests/
-│   ├── test_whichx.sh  # 51 functional tests
+│   ├── test_which.sh   # 51 functional tests
 │   └── benchmark.sh    # Performance comparison
 ├── LICENSE
 └── README.md
@@ -178,4 +191,4 @@ GPL-3.0 — see [LICENSE](LICENSE)
 
 ## See Also
 
-`man whichx` | `which(1)` | `whereis(1)` | `type(1)` | `command(1)`
+`man which` | `whereis(1)` | `type(1)` | `command(1)`

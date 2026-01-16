@@ -1,19 +1,17 @@
-.TH WHICHX 1 "2025" "whichx 2.0" "User Commands"
+.TH WHICH 1 "2025" "which 2.0" "User Commands"
 .SH NAME
-whichx \- locate a command (robust, POSIX-compliant which replacement)
+which \- locate a command (robust, POSIX-compliant replacement)
 .SH SYNOPSIS
-.B whichx
+.B which
 [\fIOPTIONS\fR]
 .IR filename " ..."
 .SH DESCRIPTION
-.B whichx
+.B which
 is a robust, POSIX-compliant drop-in replacement for the classic Unix
 .BR which (1)
-command. It locates executables in your PATH with enhanced features
-while maintaining full compatibility with standard
-.BR which .
+command. It locates executables in your PATH with enhanced features.
 .PP
-.B whichx
+.B which
 returns the pathnames of files (or links) that would be executed in the
 current environment, had its arguments been given as commands in a
 strictly POSIX-conformant shell. It searches the
@@ -31,6 +29,8 @@ POSIX-compliant PATH handling including empty elements
 .IP \(bu 2
 Combined short options support (\-ac equivalent to \-a \-c)
 .IP \(bu 2
+Sourceable for 12x faster interactive use
+.IP \(bu 2
 Consistent behavior across all Unix/Linux systems
 .SH OPTIONS
 Options can be combined: \fB\-ac\fR is equivalent to \fB\-a \-c\fR.
@@ -45,9 +45,12 @@ Resolve symlinks and print canonical paths using
 This resolves all symbolic links and relative path components to show
 the actual executable location.
 .TP
-.BR \-s ", " \-\-silent
-Silent mode. Suppress all output; communicate via exit code only.
+.BR \-q ", " \-\-quiet
+Quiet mode. Suppress all output; communicate via exit code only.
 Useful for conditional checks in scripts.
+.TP
+.BR \-s ", " \-\-silent
+Silent mode. Same as \-q.
 .TP
 .BR \-V ", " \-\-version
 Print version information and exit.
@@ -59,7 +62,7 @@ Display help message and exit.
 End of options. All subsequent arguments are treated as filenames,
 even if they begin with a hyphen.
 .SH EXIT STATUS
-.B whichx
+.B which
 uses specific exit codes to allow scripts to distinguish between
 different error conditions:
 .TP
@@ -80,7 +83,7 @@ Find the location of the ls command:
 .PP
 .RS
 .nf
-$ whichx ls
+$ which ls
 /usr/bin/ls
 .fi
 .RE
@@ -89,7 +92,7 @@ Find multiple commands at once:
 .PP
 .RS
 .nf
-$ whichx ls cat grep
+$ which ls cat grep
 /usr/bin/ls
 /usr/bin/cat
 /usr/bin/grep
@@ -100,7 +103,7 @@ Show all executables in PATH, not just the first:
 .PP
 .RS
 .nf
-$ whichx \-a python3
+$ which \-a python3
 /usr/bin/python3
 /usr/local/bin/python3
 .fi
@@ -110,10 +113,10 @@ Resolve symlinks to find the actual executable:
 .PP
 .RS
 .nf
-$ whichx python3
+$ which python3
 /usr/bin/python3
 
-$ whichx \-c python3
+$ which \-c python3
 /usr/bin/python3.12
 .fi
 .RE
@@ -122,23 +125,23 @@ Options can be combined for convenience:
 .PP
 .RS
 .nf
-$ whichx \-ac python3
+$ which \-ac python3
 /usr/bin/python3.12
 /usr/local/bin/python3.11
 .fi
 .RE
-.SS Silent Mode (\-s)
+.SS Silent Mode (\-q/\-s)
 Use in scripts for conditional checks:
 .PP
 .RS
 .nf
 # Simple conditional
-if whichx \-s docker; then
+if which \-q docker; then
     echo "Docker is available"
 fi
 
 # Pre-flight dependency check
-whichx \-s gcc make cmake || {
+which \-q gcc make cmake || {
     echo "Missing build tools" >&2
     exit 1
 }
@@ -149,52 +152,50 @@ Verify a specific path is executable:
 .PP
 .RS
 .nf
-$ whichx /usr/local/bin/my\-script
+$ which /usr/local/bin/my\-script
 /usr/local/bin/my-script
 
-$ whichx ./local\-tool
+$ which ./local\-tool
 ./local-tool
+.fi
+.RE
+.SH SOURCEABLE MODE
+For interactive shells,
+.B which
+can be sourced instead of executed as a subprocess, providing ~12x faster performance:
+.PP
+.RS
+.nf
+# Add to ~/.bashrc or install to /etc/profile.d/
+source /usr/local/bin/which
+
+# Now which runs as a shell function (~7500 ops/s vs ~600 ops/s)
+which ls
 .fi
 .RE
 .SH POSIX COMPLIANCE
 .SS Empty PATH Elements
 Per POSIX, an empty element in PATH means the current directory.
-.B whichx
-handles this correctly, unlike many
-.BR which (1)
-implementations:
+.B which
+handles this correctly, unlike many implementations:
 .PP
 .RS
 .nf
 # Leading colon = empty first element = current directory
-$ PATH=":/usr/bin" whichx ./my\-script
+$ PATH=":/usr/bin" which ./my\-script
 ./my-script
 
 # Double colon = empty middle element
-$ PATH="/usr/bin::/usr/local/bin" whichx ls
+$ PATH="/usr/bin::/usr/local/bin" which ls
 /usr/bin/ls
 .fi
 .RE
 .SS Search Order
-.B whichx
+.B which
 searches PATH directories in order and returns the first match
 (unless
 .B \-a
 is specified), exactly as a POSIX shell would resolve the command.
-.SH COMPARISON WITH STANDARD WHICH
-.TS
-l l l.
-Feature	which	whichx
-_
-Find executables	Yes	Yes
-Multiple targets	Yes	Yes
-Show all matches	Yes	Yes
-Canonical paths	No	Yes
-True silent mode	Partial	Yes
-Specific exit codes	No	Yes
-POSIX PATH compliance	Varies	Yes
-Combined short options	Varies	Yes
-.TE
 .SH ENVIRONMENT
 .TP
 .B PATH
@@ -202,40 +203,38 @@ Colon-separated list of directories to search for executables.
 Empty elements are treated as the current directory per POSIX.
 .SH FILES
 .TP
-.I /usr/local/bin/whichx
+.I /usr/local/bin/which
 Default installation location.
 .TP
-.I /usr/local/bin/which
-Symlink to whichx (created during installation).
+.I /etc/profile.d/which.bash
+Sourceable installation location (optional).
 .SH DEPENDENCIES
 .TP
 .B bash
-Version 4.3 or later (uses modern bash features).
+Version 4.4 or later.
 .TP
 .BR realpath (1)
 Required for canonical path resolution
 .RB ( \-c
-option).
-.TP
-.BR grep (1)
-Used for combined option parsing.
+option). Falls back to
+.BR readlink (1)
+if unavailable.
 .SH SEE ALSO
-.BR which (1),
 .BR whereis (1),
 .BR type (1),
 .BR command (1),
 .BR realpath (1),
 .BR bash (1)
 .SH STANDARDS
-.B whichx
+.B which
 follows POSIX guidelines for PATH searching, including proper handling
 of empty PATH elements which many implementations get wrong.
 .SH BUGS
 Report bugs at: https://github.com/Open-Technology-Foundation/whichx/issues
 .SH AUTHOR
-Gary Dean <https://github.com/Open-Technology-Foundation>
+Indonesian Open Technology Foundation (admin@yatti.id)
 .SH COPYRIGHT
-Copyright \(co 2025 Gary Dean.
+Copyright \(co 2025 Indonesian Open Technology Foundation.
 .PP
 License GPLv3+: GNU GPL version 3 or later.
 .br
@@ -243,5 +242,3 @@ This is free software: you are free to change and redistribute it.
 There is NO WARRANTY, to the extent permitted by law.
 .SH LINKS
 Project repository: https://github.com/Open-Technology-Foundation/whichx
-.PP
-Bash Coding Standard: https://github.com/Open-Technology-Foundation/bash-coding-standard
