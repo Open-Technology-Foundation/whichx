@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: GPL-3.0-or-later
-# Copyright (C) 2025 Indonesian Open Technology Foundation (admin@yatti.id)
-# which - which function as script, or source for ~/.bashrc
+# Copyright (C) 2025-2026 Indonesian Open Technology Foundation (admin@yatti.id)
+# which - locate executables in PATH (script or sourceable function)
 # Usage: which -h
 # Usage: source which && which -h
 
