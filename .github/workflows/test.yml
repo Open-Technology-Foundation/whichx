@@ -19,3 +19,6 @@ jobs:
 
       - name: Run tests
         run: make test
+
+      - name: Run benchmark
+        run: bash tests/benchmark-ci.sh
