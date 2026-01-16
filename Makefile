@@ -7,9 +7,17 @@ PROFILED = /etc/profile.d
 SCRIPT = which
 MANPAGE = which.1
 
-.PHONY: all help install uninstall install-sourceable uninstall-sourceable test shellcheck functional benchmark
+.PHONY: all help check-bash install uninstall install-sourceable uninstall-sourceable test shellcheck functional benchmark
+
+BASH_MIN := 4.4
 
 all: help
+
+check-bash:
+	@bash -c 'ver="$${BASH_VERSINFO[0]}.$${BASH_VERSINFO[1]}"; \
+	  if [[ "$$ver" < "$(BASH_MIN)" ]]; then \
+	    echo "Error: Bash $(BASH_MIN)+ required (found $$ver)"; exit 1; \
+	  fi'
 
 help:
 	@echo "which Makefile targets:"
@@ -25,7 +33,7 @@ help:
 	@echo "Variables:"
 	@echo "  PREFIX=$(PREFIX)  - Installation prefix (default: /usr/local)"
 
-install:
+install: check-bash
 	@echo "Installing $(SCRIPT) to $(BINDIR)..."
 	install -d $(BINDIR)
 	install -m 755 $(SCRIPT) $(BINDIR)/$(SCRIPT)
@@ -43,7 +51,7 @@ uninstall:
 	rm -f $(MANDIR)/$(MANPAGE)
 	@echo "Uninstallation complete."
 
-install-sourceable:
+install-sourceable: check-bash
 	@echo "Installing $(SCRIPT) to $(PROFILED)/which.sh..."
 	install -d $(PROFILED)
 	install -m 644 $(SCRIPT) $(PROFILED)/which.sh
