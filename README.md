@@ -4,7 +4,7 @@ A robust, POSIX-compliant `which` replacement for Bash.
 
 [![License: GPL-3.0](https://img.shields.io/badge/License-GPL%203.0-blue.svg)](LICENSE)
 [![Bash 4.4+](https://img.shields.io/badge/Bash-4.4%2B-green.svg)](https://www.gnu.org/software/bash/)
-[![Tests: 51 passing](https://img.shields.io/badge/Tests-51%20passing-brightgreen.svg)](tests/)
+[![Tests: 69 passing](https://img.shields.io/badge/Tests-69%20passing-brightgreen.svg)](tests/)
 
 ## TL;DR
 

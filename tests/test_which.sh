@@ -275,6 +275,63 @@ run_tests() {
   out=$(PATH="$TESTPATH" "$WHICH" brokensym 2>&1); rc=$?
   assert_exit 1 $rc "edge: broken symlink not found (not executable)"
 
+  # --- SOURCED MODE ---
+  echo "# Sourced mode"
+
+  # Source creates which function
+  out=$(bash -c "source '$WHICH' && type which 2>&1"); rc=$?
+  assert_exit 0 $rc "sourced: creates which function"
+  assert_contains "function" "$out" "sourced: type reports function"
+
+  # Function finds commands
+  out=$(bash -c "source '$WHICH' && which ls 2>&1"); rc=$?
+  assert_exit 0 $rc "sourced: finds ls"
+  assert_contains "/ls" "$out" "sourced: outputs path"
+
+  # Options work: -a
+  out=$(bash -c "source '$WHICH' && PATH='$TESTPATH' which -a testcmd 2>&1"); rc=$?
+  assert_exit 0 $rc "sourced: -a works"
+
+  # Options work: -q
+  out=$(bash -c "source '$WHICH' && which -q ls 2>&1"); rc=$?
+  assert_exit 0 $rc "sourced: -q works"
+  assert_empty "$out" "sourced: -q no output"
+
+  # Options work: -V
+  out=$(bash -c "source '$WHICH' && which -V 2>&1"); rc=$?
+  assert_exit 0 $rc "sourced: -V works"
+  assert_contains "2.0" "$out" "sourced: -V shows version"
+
+  # Options work: -h (brief help when sourced)
+  out=$(bash -c "source '$WHICH' && which -h 2>&1"); rc=$?
+  assert_exit 0 $rc "sourced: -h works"
+  assert_contains "Usage:" "$out" "sourced: -h shows usage"
+
+  # Strict mode isolation: errexit not set
+  out=$(bash -c "source '$WHICH'; [[ \$- == *e* ]] && echo FAIL || echo OK"); rc=$?
+  assert_output "OK" "$out" "sourced: errexit not set in parent"
+
+  # Strict mode isolation: nounset not set
+  out=$(bash -c "source '$WHICH'; [[ \$- == *u* ]] && echo FAIL || echo OK"); rc=$?
+  assert_output "OK" "$out" "sourced: nounset not set in parent"
+
+  # Strict mode isolation: pipefail not set
+  out=$(bash -c "source '$WHICH'; shopt -q -o pipefail && echo FAIL || echo OK"); rc=$?
+  assert_output "OK" "$out" "sourced: pipefail not set in parent"
+
+  # Function exported to subshells
+  out=$(bash -c "source '$WHICH' && bash -c 'type which' 2>&1"); rc=$?
+  assert_exit 0 $rc "sourced: function exported"
+  assert_contains "function" "$out" "sourced: subshell sees function"
+
+  # Return vs exit: error doesn't kill shell
+  out=$(bash -c "source '$WHICH'; which nonexistent_xyz 2>/dev/null; echo ALIVE"); rc=$?
+  assert_contains "ALIVE" "$out" "sourced: error returns, doesn't exit"
+
+  # Return vs exit: no args doesn't kill shell
+  out=$(bash -c "source '$WHICH'; which 2>/dev/null; echo ALIVE"); rc=$?
+  assert_contains "ALIVE" "$out" "sourced: no args returns, doesn't exit"
+
   # --- SUMMARY ---
   echo
   printf '1..%d\n' "$tests"
