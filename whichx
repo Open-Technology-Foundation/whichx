@@ -65,9 +65,10 @@ search_executable() {
     return $((found ? 0 : 1))
   fi
 
-  local -- IFS=':'
+  local -- IFS=':' path_str="${PATH:-}"
   local -a path_dirs
-  read -ra path_dirs <<< "${PATH:-}"
+  [[ $path_str == *: ]] && path_str+='.'  # Trailing colon = cwd (POSIX)
+  read -ra path_dirs <<< "$path_str"
   for path in "${path_dirs[@]}"; do
     [[ -n $path ]] || path='.'  # Empty element = cwd (POSIX)
 

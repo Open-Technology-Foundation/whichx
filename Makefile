@@ -1,5 +1,4 @@
 # Makefile for whichx
-# Install whichx and create which symlink
 
 PREFIX ?= /usr/local
 BINDIR = $(PREFIX)/bin
@@ -8,7 +7,7 @@ SCRIPT = whichx
 SYMLINK = which
 MANPAGE = whichx.1
 
-.PHONY: all help install uninstall test
+.PHONY: all help install uninstall test shellcheck functional benchmark
 
 all: help
 
@@ -16,7 +15,10 @@ help:
 	@echo "whichx Makefile targets:"
 	@echo "  make install    - Install whichx, manpage, and create which symlink"
 	@echo "  make uninstall  - Remove whichx, manpage, and which symlink"
-	@echo "  make test       - Run shellcheck validation"
+	@echo "  make test       - Run shellcheck + functional tests"
+	@echo "  make shellcheck - Run shellcheck only"
+	@echo "  make functional - Run functional tests only"
+	@echo "  make benchmark  - Run performance benchmarks vs old.which"
 	@echo ""
 	@echo "Variables:"
 	@echo "  PREFIX=$(PREFIX)  - Installation prefix (default: /usr/local)"
@@ -47,7 +49,19 @@ uninstall:
 	rm -f $(MANDIR)/$(SYMLINK).1
 	@echo "Uninstallation complete."
 
-test:
-	@echo "Running shellcheck on $(SCRIPT)..."
-	shellcheck $(SCRIPT)
+test: shellcheck functional
+
+shellcheck:
+	@echo "Running shellcheck..."
+	shellcheck $(SCRIPT) tests/*.sh
 	@echo "Shellcheck passed."
+
+functional:
+	@echo "Running functional tests..."
+	@chmod +x tests/test_whichx.sh
+	@./tests/test_whichx.sh
+
+benchmark:
+	@echo "Running benchmarks..."
+	@chmod +x tests/benchmark.sh
+	@./tests/benchmark.sh
