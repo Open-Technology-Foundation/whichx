@@ -46,7 +46,7 @@ Installs to `/usr/local/bin/which` with man page.
 ### Custom Prefix
 
 ```bash
-sudo make install PREFIX=/opt/local
+sudo make install PREFIX=/usr/bin
 ```
 
 ### Sourceable Install (Recommended for Interactive Use)
@@ -130,23 +130,22 @@ declare -fx which
 
 [[ "${BASH_SOURCE[0]}" == "$0" ]] || return 0
 
-# Only reached when executed directly
+# --- Script mode (direct execution only) ---
+set -euo pipefail
+shopt -s inherit_errexit
+
 which_help() { ... }
 which "$@"
 ```
 
 When sourced, `BASH_SOURCE[0]` differs from `$0`, so `return 0` exits early after defining the function. When executed, they match, so the script continues to run `which "$@"`.
 
-### Why No `set -euo pipefail`?
+### Strict Mode Without Pollution
 
-Traditional bash scripts use strict mode:
+Traditional bash scripts use strict mode at the top, but this would pollute the sourcing shell's environment. This script solves that by placing strict mode **after** the BASH_SOURCE guard:
 
-```bash
-set -euo pipefail
-shopt -s inherit_errexit
-```
-
-This script deliberately omits these because **they would pollute the sourcing shell's environment**. Instead, errors are handled explicitly with return codes.
+- **Sourced**: Returns before reaching `set -euo pipefail` — caller's shell unaffected
+- **Executed**: Strict mode applies only to the subprocess
 
 ### Function Structure
 

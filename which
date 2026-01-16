@@ -1,8 +1,9 @@
 #!/bin/bash
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2025 Indonesian Open Technology Foundation (admin@yatti.id)
-# which.bash - Sourceable which function for ~/.bashrc
-# Usage: source which.bash
+# which - which function as script, or source for ~/.bashrc
+# Usage: which -h
+# Usage: source which && which -h
 
 which() {
   local -r VERSION=2.0
@@ -96,8 +97,12 @@ declare -fx which
 
 [[ "${BASH_SOURCE[0]}" == "$0" ]] || return 0
 
+# --- Script mode (direct execution only) ---
+set -euo pipefail
+shopt -s inherit_errexit
+
 which_help() {
-        cat <<'HELP'
+  cat <<'HELP'
 which 2.0 - Locate executables in PATH
 
 Usage: which [OPTIONS] [--] command ...

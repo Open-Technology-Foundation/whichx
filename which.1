@@ -1,4 +1,4 @@
-.TH WHICH 1 "2025" "which 2.0" "User Commands"
+.TH WHICH 1 "2026" "which 2.0" "User Commands"
 .SH NAME
 which \- locate a command (robust, POSIX-compliant replacement)
 .SH SYNOPSIS
@@ -160,19 +160,109 @@ $ which ./local\-tool
 .fi
 .RE
 .SH SOURCEABLE MODE
-For interactive shells,
 .B which
-can be sourced instead of executed as a subprocess, providing ~12x faster performance:
+is designed to work both as an executable script and as a sourceable shell function.
+When sourced, the
+.B which()
+function runs directly in your shell process, providing ~12x faster performance.
+.SS Why Sourced Mode is Faster
+Each external command invocation requires:
+.IP \(bu 2
+fork() \(em create a new process
+.IP \(bu 2
+exec() \(em load the bash interpreter
+.IP \(bu 2
+Interpreter startup \(em parse the script
+.PP
+This overhead totals ~1.6ms per invocation.
+A shell function skips all of this, running in ~0.13ms (in-process).
+.SS Installation for Sourced Mode
 .PP
 .RS
 .nf
-# Add to ~/.bashrc or install to /etc/profile.d/
+# Option 1: Add to ~/.bashrc
 source /usr/local/bin/which
 
-# Now which runs as a shell function (~7500 ops/s vs ~600 ops/s)
-which ls
+# Option 2: System-wide via profile.d
+sudo make install-sourceable
+# Installs to /etc/profile.d/which.bash
+
+# Now which runs as a shell function
+which ls  # ~7500 ops/s vs ~600 ops/s
 .fi
 .RE
+.SS Function Export
+The script uses
+.B declare \-fx which
+to export the function to subshells, making it available in scripts launched from your interactive shell.
+.SH ARCHITECTURE
+.SS Dual-Mode Design
+The script is structured to work in two modes:
+.IP "\fBExecuted\fR" 4
+Run as
+.B ./which ls
+\(em a subprocess is created, strict mode applies, full help available.
+.IP "\fBSourced\fR" 4
+Run as
+.B source which; which ls
+\(em function runs in current shell, no subprocess overhead.
+.PP
+This is achieved with the BASH_SOURCE guard:
+.PP
+.RS
+.nf
+which() {
+  # ... function body ...
+}
+declare \-fx which
+
+[[ "${BASH_SOURCE[0]}" == "$0" ]] || return 0
+
+# Script mode only (direct execution)
+set \-euo pipefail
+shopt \-s inherit_errexit
+which "$@"
+.fi
+.RE
+.PP
+When sourced,
+.B BASH_SOURCE[0]
+differs from
+.BR $0 ,
+so
+.B return 0
+exits early after defining the function.
+When executed directly, they match, so the script continues to apply strict mode
+and run the function.
+.SS Strict Mode Without Pollution
+Traditional bash scripts enable strict mode
+.RB ( "set \-euo pipefail" )
+at the top, but this would pollute the sourcing shell's environment.
+.B which
+solves this by placing strict mode
+.I after
+the BASH_SOURCE guard:
+.IP \(bu 2
+\fBSourced\fR: Returns before reaching strict mode \(em caller's shell unaffected
+.IP \(bu 2
+\fBExecuted\fR: Strict mode applies only to the subprocess
+.SS Function Design
+All logic lives in a single
+.B which()
+function with:
+.IP \(bu 2
+All variables declared
+.B local
+(no namespace pollution)
+.IP \(bu 2
+.B return
+instead of
+.B exit
+(function-safe)
+.IP \(bu 2
+Inline PATH parsing (no helper functions to leak)
+.IP \(bu 2
+Conditional help: brief when sourced, full when executed
 .SH POSIX COMPLIANCE
 .SS Empty PATH Elements
 Per POSIX, an empty element in PATH means the current directory.
@@ -234,7 +324,7 @@ Report bugs at: https://github.com/Open-Technology-Foundation/whichx/issues
 .SH AUTHOR
 Indonesian Open Technology Foundation (admin@yatti.id)
 .SH COPYRIGHT
-Copyright \(co 2025 Indonesian Open Technology Foundation.
+Copyright \(co 2025-2026 Indonesian Open Technology Foundation.
 .PP
 License GPLv3+: GNU GPL version 3 or later.
 .br
