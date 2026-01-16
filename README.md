@@ -1,67 +1,70 @@
 # which
 
-**Locate executables in PATH — robust `which` replacement**
+A robust, POSIX-compliant `which` replacement for Bash.
 
-Version 2.0 | [GPL-3.0](LICENSE) | Bash 4.4+
+[![License: GPL-3.0](https://img.shields.io/badge/License-GPL%203.0-blue.svg)](LICENSE)
+[![Bash 4.4+](https://img.shields.io/badge/Bash-4.4%2B-green.svg)](https://www.gnu.org/software/bash/)
+[![Tests: 51 passing](https://img.shields.io/badge/Tests-51%20passing-brightgreen.svg)](tests/)
 
-```bash
-git clone https://github.com/Open-Technology-Foundation/whichx.git && cd whichx && sudo make install
-```
-
----
-
-## Why this which?
-
-Standard `which` varies across systems. This implementation provides:
-
-- **Predictable exit codes** (0, 1, 2, 22)
-- **Canonical path resolution** (`-c`)
-- **Silent mode** for scripting (`-q`/`-s`)
-- **POSIX-compliant PATH handling**
-- **Sourceable** for 12x faster interactive use
-
-## Quick Start
-
-```bash
-which python3              # Find python3
-which -a python3           # All matches in PATH
-which -c /usr/bin/python3  # Resolve symlinks
-which -q docker || exit 1  # Silent check
-```
-
----
-
-## Installation
+## TL;DR
 
 ```bash
 git clone https://github.com/Open-Technology-Foundation/whichx.git
-cd whichx
-sudo make install
+cd whichx && sudo make install
+which -a python3
+```
+
+## Why Replace which?
+
+The standard `which` command varies significantly across Unix systems:
+
+| Issue | Debian | macOS | Busybox |
+|-------|--------|-------|---------|
+| Exit code (no args) | 1 | 0 | 0 |
+| Exit code (bad option) | 2 | 1 | 1 |
+| `-s` silent mode | No | Yes | No |
+| Long options | No | No | No |
+
+This implementation provides:
+
+- **Consistent exit codes**: 0 (found), 1 (not found), 2 (no args), 22 (EINVAL)
+- **POSIX PATH compliance**: Correct handling of empty PATH elements
+- **Dual-mode execution**: Run as script OR source as function (12x faster)
+- **Canonical resolution**: Follow symlinks to actual executables
+
+## Installation
+
+### Quick Install
+
+```bash
+git clone https://github.com/Open-Technology-Foundation/whichx.git
+cd whichx && sudo make install
 ```
 
 Installs to `/usr/local/bin/which` with man page.
 
-```bash
-sudo make install PREFIX=/opt  # Custom prefix
-sudo make uninstall            # Remove
-```
-
-### Sourceable Installation (12x faster)
-
-For interactive shells, source the script instead of calling it as subprocess:
+### Custom Prefix
 
 ```bash
-sudo make install-sourceable   # Installs to /etc/profile.d/which.bash
+sudo make install PREFIX=/opt/local
 ```
 
-New shells will have the `which()` function loaded (~7500 ops/s vs ~600 ops/s).
+### Sourceable Install (Recommended for Interactive Use)
 
-### Requirements
+```bash
+sudo make install-sourceable
+```
 
-- bash 4.4+
-- realpath or readlink (for `-c`)
+This copies the script to `/etc/profile.d/which.bash`. New shells will have `which()` as a shell function instead of calling an external process.
 
----
+**Why is this faster?** Each external command invocation requires fork() + exec() + bash interpreter startup (~1.6ms). A shell function runs in-process (~0.13ms). That's **12x faster**.
+
+### Uninstall
+
+```bash
+sudo make uninstall
+sudo make uninstall-sourceable
+```
 
 ## Usage
 
@@ -71,124 +74,218 @@ which [OPTIONS] [--] command ...
 
 ### Options
 
-| Option | Description |
-|--------|-------------|
-| `-a, --all` | Print all matches, not just first |
-| `-c, --canonical` | Resolve symlinks via realpath/readlink |
-| `-q, --quiet` | No output, exit code only |
-| `-s, --silent` | Same as `-q` |
-| `-V, --version` | Print version |
-| `-h, --help` | Help |
+| Option | Long | Description |
+|--------|------|-------------|
+| `-a` | `--all` | Print all matches in PATH, not just first |
+| `-c` | `--canonical` | Resolve symlinks via realpath/readlink |
+| `-q` | `--quiet` | No output, exit code only |
+| `-s` | `--silent` | Alias for `-q` |
+| `-V` | `--version` | Print version and exit |
+| `-h` | `--help` | Print help and exit |
 
 Options can be combined: `-ac` equals `-a -c`
 
 ### Exit Codes
 
-| Code | Meaning |
-|------|---------|
-| 0 | All commands found |
-| 1 | One or more not found |
-| 2 | No arguments |
-| 22 | Invalid option |
+| Code | Constant | Meaning |
+|------|----------|---------|
+| 0 | `EXIT_SUCCESS` | All commands found |
+| 1 | `EXIT_FAILURE` | One or more not found |
+| 2 | `EXIT_USAGE` | No arguments provided |
+| 22 | `EINVAL` | Invalid option |
 
----
-
-## Examples
+### Examples
 
 ```bash
-$ which ls
-/usr/bin/ls
-
-$ which -a python3
-/usr/bin/python3
-/usr/local/bin/python3
-
-$ which -c python3
-/usr/bin/python3.12
-
-$ which -q gcc make || echo "Missing tools"
+which ls                      # /usr/bin/ls
+which -a python3              # All python3 in PATH
+which -c /usr/bin/python3     # Resolves to /usr/bin/python3.12
+which -q docker && echo "ok"  # Silent check
+which ls cat grep             # Multiple commands
+which -- -weird-name          # Command starting with hyphen
 ```
 
-### Scripting
+## Architecture
+
+### Dual-Mode Design
+
+The script works both as an executable and as a sourceable function:
 
 ```bash
-# Pre-flight check
-for tool in git curl jq; do
-  which -q "$tool" || { echo "Missing: $tool" >&2; exit 1; }
+# As executable (subprocess)
+./which ls
+
+# As sourced function (in-process)
+source ./which
+which ls
+```
+
+This is achieved with the `BASH_SOURCE` guard:
+
+```bash
+which() {
+  # ... function body ...
+}
+declare -fx which
+
+[[ "${BASH_SOURCE[0]}" == "$0" ]] || return 0
+
+# Only reached when executed directly
+which_help() { ... }
+which "$@"
+```
+
+When sourced, `BASH_SOURCE[0]` differs from `$0`, so `return 0` exits early after defining the function. When executed, they match, so the script continues to run `which "$@"`.
+
+### Why No `set -euo pipefail`?
+
+Traditional bash scripts use strict mode:
+
+```bash
+set -euo pipefail
+shopt -s inherit_errexit
+```
+
+This script deliberately omits these because **they would pollute the sourcing shell's environment**. Instead, errors are handled explicitly with return codes.
+
+### Function Structure
+
+All logic lives in a single `which()` function with:
+
+- All variables declared `local` (no namespace pollution)
+- `return` instead of `exit` (function-safe)
+- Inline PATH parsing (no helper functions to leak)
+- Conditional help: brief when sourced, full when executed
+
+### PATH Parsing
+
+```bash
+path_str=${PATH:-}
+[[ $path_str == *: ]] && path_str+='.'  # Trailing colon = cwd
+IFS=':' read -ra path_dirs <<< "$path_str"
+
+for path in "${path_dirs[@]}"; do
+  [[ -n $path ]] || path='.'  # Empty element = cwd
+  # ...
 done
-
-# Tool selection
-PYTHON=$(which python3 2>/dev/null || which python)
-"$PYTHON" script.py
 ```
 
----
+The `read -ra` with herestring is a common idiom, but it drops trailing empty elements. The `*:` check handles trailing colons explicitly.
 
 ## POSIX Compliance
 
-Empty PATH elements = current directory:
+Per POSIX, an empty element in PATH means the current directory. Many `which` implementations get this wrong.
 
 ```bash
-PATH=":/usr/bin" which ./script   # Leading colon
-PATH="/usr/bin:" which ./script   # Trailing colon
+# Leading colon = cwd searched first
+PATH=":/usr/bin" which ./script
+
+# Trailing colon = cwd searched last
+PATH="/usr/bin:" which ./script
+
+# Double colon = cwd searched in middle
+PATH="/usr/bin::/usr/local/bin" which ./script
 ```
 
----
+This matters for security audits and understanding command resolution.
+
+## Performance
+
+### Methodology
+
+Benchmarks run each command 1000 times, measuring wall-clock time with nanosecond precision.
+
+### Results
+
+| Test | which (subprocess) | which (sourced) | old.which (dash) |
+|------|-------------------|-----------------|------------------|
+| Single lookup | ~600 ops/s | ~7,500 ops/s | ~1,200 ops/s |
+| Large PATH (50 dirs) | ~500 ops/s | ~6,000 ops/s | ~1,200 ops/s |
+| Not found | ~600 ops/s | ~7,500 ops/s | ~1,200 ops/s |
+
+### Analysis
+
+**Why is subprocess mode 2x slower than dash-based which?**
+
+Bash has more startup overhead than dash. The actual PATH searching is nearly identical, but bash's interpreter initialization dominates.
+
+**Why is sourced mode 12x faster?**
+
+No fork(), no exec(), no interpreter startup. The function runs directly in the current shell's process space.
+
+### Run Benchmarks
+
+```bash
+make benchmark
+```
 
 ## Testing
 
+### Run Tests
+
 ```bash
-make test         # shellcheck + functional tests (51 tests)
-make shellcheck   # shellcheck only
-make functional   # functional tests only
-make benchmark    # performance comparison vs old.which
+make test         # shellcheck + functional tests
+make shellcheck   # Static analysis only
+make functional   # 51 functional tests only
 ```
 
 ### Test Coverage
 
-- Basic operations, all options, combined options
+- Basic operations (find, not found, multiple targets)
+- All options (`-a`, `-c`, `-q`, `-s`, `-V`, `-h`, `--long`)
+- Combined options (`-ac`, `-qa`, `-aqs`)
 - Exit codes (0, 1, 2, 22)
-- POSIX PATH edge cases (leading/trailing/double colon)
-- Symlink resolution, broken symlinks
-- Non-executable files, directories
+- PATH edge cases (leading/trailing/double colon, empty, nonexistent dirs)
+- Input handling (absolute path, relative path, `--` separator, hyphen commands)
+- Edge cases (non-executable, directories, symlinks, broken symlinks)
 
-### Benchmark (vs debianutils which)
+### Adding Tests
 
-| Test | which | old.which |
-|------|-------|-----------|
-| Single lookup | ~600 ops/s | ~1200 ops/s |
-| Large PATH | ~500 ops/s | ~1200 ops/s |
-| Sourced | ~7500 ops/s | N/A |
+Tests use TAP-style output. Add to `tests/test_which.sh`:
 
-Subprocess is ~2x slower (bash vs dash) but sub-millisecond per operation.
-Sourced function is 12x faster than subprocess.
-
----
-
-## Project Structure
-
-```
-whichx/
-├── which             # Main script (executable + sourceable)
-├── which.1           # Man page
-├── Makefile
-├── tests/
-│   ├── test_which.sh   # 51 functional tests
-│   └── benchmark.sh    # Performance comparison
-├── LICENSE
-└── README.md
+```bash
+out=$("$WHICH" -a python3 2>&1); rc=$?
+assert_exit 0 $rc "description"
+assert_contains "python" "$out" "description"
 ```
 
----
+## Contributing
+
+### Code Style
+
+- All variables `local` (sourceable requirement)
+- Integer variables: `local -i count=0`
+- Arrays: `local -a items=()`
+- Conditionals: `[[ ]]` never `[ ]`
+- Arithmetic: `(( ))` only
+- 2-space indentation
+- Quote all variable expansions
+- Errors to stderr: `printf >&2`
+
+### Requirements
+
+- Must pass `shellcheck`
+- Must pass all 51 tests
+- No new dependencies
+
+### Pull Requests
+
+1. Fork the repository
+2. Create a feature branch
+3. Make changes
+4. Run `make test`
+5. Submit PR
 
 ## License
 
-GPL-3.0 — see [LICENSE](LICENSE)
+GPL-3.0-or-later — see [LICENSE](LICENSE)
 
-**Indonesian Open Technology Foundation** (admin@yatti.id)
-
----
+**Indonesian Open Technology Foundation**
+admin@yatti.id
 
 ## See Also
 
-`man which` | `whereis(1)` | `type(1)` | `command(1)`
+- `man which` — installed man page
+- `type(1)` — bash builtin, shows aliases/functions too
+- `command -v` — POSIX way to find commands
+- `whereis(1)` — also searches man pages and source
