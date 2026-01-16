@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Comprehensive test suite for which
 set -uo pipefail  # Note: no -e, we handle exit codes manually
@@ -201,35 +201,36 @@ run_tests() {
   # --- PATH HANDLING ---
   echo "# PATH handling"
 
+  # Note: /usr/bin included so #!/usr/bin/env bash can find bash
   # Leading colon (cwd first)
   pushd "$TESTDIR" >/dev/null || return 1
-  out=$(PATH=":$TESTDIR/bin1" "$WHICH" cwdcmd 2>&1); rc=$?
+  out=$(PATH=":/usr/bin:$TESTDIR/bin1" "$WHICH" cwdcmd 2>&1); rc=$?
   assert_exit 0 $rc "path: leading colon finds cwd"
   popd >/dev/null || return 1
 
   # Trailing colon (cwd last)
   pushd "$TESTDIR" >/dev/null || return 1
-  out=$(PATH="$TESTDIR/bin1:" "$WHICH" cwdcmd 2>&1); rc=$?
+  out=$(PATH="/usr/bin:$TESTDIR/bin1:" "$WHICH" cwdcmd 2>&1); rc=$?
   assert_exit 0 $rc "path: trailing colon finds cwd"
   popd >/dev/null || return 1
 
   # Double colon (cwd in middle)
   pushd "$TESTDIR" >/dev/null || return 1
-  out=$(PATH="$TESTDIR/bin1::$TESTDIR/bin2" "$WHICH" cwdcmd 2>&1); rc=$?
+  out=$(PATH="/usr/bin:$TESTDIR/bin1::$TESTDIR/bin2" "$WHICH" cwdcmd 2>&1); rc=$?
   assert_exit 0 $rc "path: double colon finds cwd"
   popd >/dev/null || return 1
 
-  # Empty PATH
-  out=$(PATH="" "$WHICH" ls 2>&1); rc=$?
+  # Empty PATH - invoke bash directly since env can't find it with empty PATH
+  out=$(PATH="" /bin/bash "$WHICH" ls 2>&1); rc=$?
   assert_exit 1 $rc "path: empty PATH returns 1"
 
   # PATH with non-existent directories
-  out=$(PATH="/nonexistent:$TESTDIR/bin1" "$WHICH" testcmd 2>&1); rc=$?
+  out=$(PATH="/nonexistent:/usr/bin:$TESTDIR/bin1" "$WHICH" testcmd 2>&1); rc=$?
   assert_exit 0 $rc "path: skips non-existent dirs"
 
   # Single dot in PATH
   pushd "$TESTDIR" >/dev/null || return 1
-  out=$(PATH="." "$WHICH" cwdcmd 2>&1); rc=$?
+  out=$(PATH=".:/usr/bin" "$WHICH" cwdcmd 2>&1); rc=$?
   assert_exit 0 $rc "path: explicit dot works"
   popd >/dev/null || return 1
 

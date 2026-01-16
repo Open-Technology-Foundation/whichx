@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2025 Indonesian Open Technology Foundation (admin@yatti.id)
 # which - which function as script, or source for ~/.bashrc
@@ -23,7 +23,7 @@ which() {
       -V|--version)   printf 'which %s\n' "$VERSION"
                       return 0 ;;
       -h|--help)      declare -f which_help >/dev/null && which_help || \
-                          printf 'Usage: which [-acqsVh] [--] command ...\nman which for help.'
+                          printf 'Usage: which [-acqsVh] [--] command ...\nman which for help.\n'
                       return 0 ;;
       --)             shift; targets+=("$@"); break ;;
       -[acqsVh]?*)    set -- "${1:0:2}" "-${1:2}" "${@:2}"; continue ;;

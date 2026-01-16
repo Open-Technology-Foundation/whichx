@@ -6,6 +6,8 @@ A robust, POSIX-compliant `which` replacement for Bash.
 [![Bash 4.4+](https://img.shields.io/badge/Bash-4.4%2B-green.svg)](https://www.gnu.org/software/bash/)
 [![Tests: 69 passing](https://img.shields.io/badge/Tests-69%20passing-brightgreen.svg)](tests/)
 
+**Requires Bash 4.4+** — runs on any OS with a compatible shell.
+
 ## TL;DR
 
 ```bash

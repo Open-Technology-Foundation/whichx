@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # SPDX-License-Identifier: GPL-3.0-or-later
 # CI benchmark: compare which vs legacy-which/which.debianutils
 set -euo pipefail
