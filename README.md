@@ -59,6 +59,10 @@ This copies the script to `/etc/profile.d/which.sh`. New shells will have `which
 
 **Why is this faster?** Each external command invocation requires fork() + exec() + bash interpreter startup (~1.6ms). A shell function runs in-process (~0.13ms). That's **12x faster**.
 
+**Note:** `/etc/profile.d/` is sourced by login shells via `/etc/profile`. Most terminal emulators start non-login shells, which source `~/.bashrc` instead. If `which` isn't available in new terminals, either:
+- Add `source /etc/profile.d/which.sh` to your `~/.bashrc`, or
+- Configure your terminal to start login shells
+
 ### Uninstall
 
 ```bash

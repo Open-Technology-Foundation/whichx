@@ -191,6 +191,23 @@ sudo make install-sourceable
 which ls  # ~7500 ops/s vs ~600 ops/s
 .fi
 .RE
+.PP
+.B Note:
+.I /etc/profile.d/
+is sourced by login shells via
+.IR /etc/profile .
+Most terminal emulators start non-login shells, which source
+.I ~/.bashrc
+instead. If
+.B which
+isn\(aqt available in new terminals, add to your
+.IR ~/.bashrc :
+.PP
+.RS
+.nf
+source /etc/profile.d/which.sh
+.fi
+.RE
 .SS Function Export
 The script uses
 .B declare \-fx which
