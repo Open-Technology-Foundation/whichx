@@ -55,7 +55,7 @@ sudo make install PREFIX=/usr/bin
 sudo make install-sourceable
 ```
 
-This copies the script to `/etc/profile.d/which.bash`. New shells will have `which()` as a shell function instead of calling an external process.
+This copies the script to `/etc/profile.d/which.sh`. New shells will have `which()` as a shell function instead of calling an external process.
 
 **Why is this faster?** Each external command invocation requires fork() + exec() + bash interpreter startup (~1.6ms). A shell function runs in-process (~0.13ms). That's **12x faster**.
 

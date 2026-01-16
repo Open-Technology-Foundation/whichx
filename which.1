@@ -185,7 +185,7 @@ source /usr/local/bin/which
 
 # Option 2: System-wide via profile.d
 sudo make install-sourceable
-# Installs to /etc/profile.d/which.bash
+# Installs to /etc/profile.d/which.sh
 
 # Now which runs as a shell function
 which ls  # ~7500 ops/s vs ~600 ops/s
@@ -296,7 +296,7 @@ Empty elements are treated as the current directory per POSIX.
 .I /usr/local/bin/which
 Default installation location.
 .TP
-.I /etc/profile.d/which.bash
+.I /etc/profile.d/which.sh
 Sourceable installation location (optional).
 .SH DEPENDENCIES
 .TP

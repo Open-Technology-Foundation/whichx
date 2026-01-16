@@ -44,15 +44,15 @@ uninstall:
 	@echo "Uninstallation complete."
 
 install-sourceable:
-	@echo "Installing $(SCRIPT) to $(PROFILED)/which.bash..."
+	@echo "Installing $(SCRIPT) to $(PROFILED)/which.sh..."
 	install -d $(PROFILED)
-	install -m 644 $(SCRIPT) $(PROFILED)/which.bash
-	@echo "Installation complete: $(PROFILED)/which.bash"
+	install -m 644 $(SCRIPT) $(PROFILED)/which.sh
+	@echo "Installation complete: $(PROFILED)/which.sh"
 	@echo "New shells will have which() function (12x faster)"
 
 uninstall-sourceable:
-	@echo "Removing which.bash from $(PROFILED)..."
-	rm -f $(PROFILED)/which.bash
+	@echo "Removing which.sh from $(PROFILED)..."
+	rm -f $(PROFILED)/which.sh
 	@echo "Uninstallation complete."
 
 test: shellcheck functional
