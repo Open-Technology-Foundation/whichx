@@ -6,21 +6,17 @@ set -euo pipefail
 shopt -s inherit_errexit extglob nullglob
 
 declare -r VERSION=2.0
-
-#shellcheck disable=SC2155
-declare -r SCRIPT_PATH=$(realpath -e -- "$0")
-declare -r SCRIPT_NAME=${SCRIPT_PATH##*/}
-
-# Exit codes
-declare -ir EXIT_SUCCESS=0 EXIT_NOT_FOUND=1 EXIT_USAGE_ERROR=2 EXIT_INVALID_OPTION=22
+declare -r SCRIPT_NAME=${0##*/}
 
 declare -i opt_all=0 opt_canonical=0 opt_silent=0
-declare -a targets=()
+
+# Output error message to stderr (suppressed in silent mode)
+error() { ((opt_silent)) || >&2 printf '%s: error: %s\n' "$SCRIPT_NAME" "$*"; }
 
 # Display usage documentation
 show_help() {
   cat <<HELP
-$SCRIPT_NAME $VERSION - Locate a command
+$SCRIPT_NAME $VERSION - Locate an executable command
 
 A robust, POSIX-compliant drop-in replacement for 'which'. Searches the PATH
 environment variable and displays the location of matching executables.
@@ -53,28 +49,23 @@ Examples:
   $SCRIPT_NAME -s gcc make || exit 1 # Pre-flight check in scripts
 
 Requirements:
-  bash 4.3+, realpath, grep
+  bash 4.4+, realpath
 
 See also: which(1), whereis(1), type(1), command(1)
 HELP
 }
 
-# Output error message to stderr (suppressed in silent mode)
-error() { ((opt_silent)) || >&2 printf '%s: ✗ %s\n' "$SCRIPT_NAME" "$*"; }
-
 # Output path to stdout, optionally resolving to canonical form
 # Returns: 0 on success, 1 if realpath fails (canonical mode only)
 get_path() {
   local -- path=$1
-
   if ((opt_canonical)); then
-    if ! realpath -- "$path" 2>/dev/null; then
-      error "Cannot resolve canonical path for ${path@Q}"
+    if ! path=$(realpath -- "$path" 2>/dev/null); then
+      error "Cannot resolve canonical path for ${1@Q}"
       return 1
     fi
-  else
-    ((opt_silent)) || printf '%s\n' "$path"
   fi
+  ((opt_silent)) || printf '%s\n' "$path"
   return 0
 }
 
@@ -99,7 +90,7 @@ search_executable() {
   local -- IFS=':'
   local -a path_dirs
   read -ra path_dirs <<< "${PATH:-}"
-
+  local -- path
   for path in "${path_dirs[@]}"; do
     # Empty PATH elements mean current directory per POSIX (e.g., PATH=":/usr/bin")
     [[ -n $path ]] || path='.'
@@ -121,7 +112,8 @@ search_executable() {
 
 # Main entry point: parse arguments, search for each target, return aggregate status
 main() {
-  local -i overall_exit_code=$EXIT_SUCCESS
+  local -i overall_exit_code=0
+  local -a targets=()
   local -- target
 
   # Argument parsing with combined short option support (-ac → -a -c)
@@ -133,21 +125,21 @@ main() {
                       ;;
       -s|--silent)    opt_silent=1
                       ;;
-      -V|--version)   echo "$SCRIPT_NAME $VERSION"
-                      return $EXIT_SUCCESS
+      -V|--version)   printf '%s %s\n' "$SCRIPT_NAME" "$VERSION"
+                      return 0
                       ;;
       -h|--help)      show_help
-                      return $EXIT_SUCCESS
+                      return 0
                       ;;
       --)             shift
                       targets+=("$@")
                       break
                       ;;  # End of options
-      -[acsVh]*) #shellcheck disable=SC2046  # Split combined options: -ac → -a -c
-                      set -- '' $(printf -- '-%c ' $(grep -o . <<<"${1:1}")) "${@:2}"
+      -[acsVh]?*)  # Combined short options (2+ chars): -ac → -a -c
+                      set -- "${1:0:2}" "-${1:2}" "${@:2}"
                       ;;
-      -*)             error "Invalid option ${1@Q}"
-                      exit $EXIT_INVALID_OPTION
+      -*)             error "Illegal option ${1@Q}"
+                      exit 22
                       ;;
       *)              targets+=("$1")
                       ;;
@@ -158,14 +150,12 @@ main() {
   # Require at least one target filename
   if ((${#targets[@]} == 0)); then
     ((opt_silent)) || error "No arguments provided. See $SCRIPT_NAME --help"
-    exit $EXIT_USAGE_ERROR
+    exit 2
   fi
 
   # Search each target; overall success only if ALL targets found
   for target in "${targets[@]}"; do
-    if ! search_executable "$target"; then
-      overall_exit_code=$EXIT_NOT_FOUND
-    fi
+    search_executable "$target" || overall_exit_code=1
   done
 
   exit $overall_exit_code
