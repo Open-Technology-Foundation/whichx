@@ -14,6 +14,8 @@ which() {
   local -a path_dirs
   local path_str
 
+  error() { ((opt_silent)) || printf >&2 'which: error: %s\n' "$*"; }
+
   while (($#)); do
     case $1 in
       -a|--all)       opt_all=1 ;;
@@ -27,7 +29,7 @@ which() {
                       return 0 ;;
       --)             shift; targets+=("$@"); break ;;
       -[acqsVh]?*)    set -- "${1:0:2}" "-${1:2}" "${@:2}"; continue ;;
-      -*)             ((opt_silent)) || printf >&2 'which: error: Illegal option %s\n' "${1@Q}"
+      -*)             error "Illegal option ${1@Q}"
                       return 22 ;;
       *)              targets+=("$1") ;;
     esac
@@ -35,7 +37,7 @@ which() {
   done
 
   if ((${#targets[@]} == 0)); then
-    ((opt_silent)) || printf >&2 'which: error: No arguments. See which --help\n'
+    error 'No arguments. See which --help'
     return 2
   fi
 
@@ -51,7 +53,7 @@ which() {
             ((opt_silent)) || printf '%s\n' "$resolved"
             found=1
           else
-            ((opt_silent)) || printf >&2 'which: error: Cannot resolve canonical path for %s\n' "${target@Q}"
+            error "Cannot resolve canonical path for ${target@Q}"
           fi
         else
           ((opt_silent)) || printf '%s\n' "$target"
@@ -78,7 +80,7 @@ which() {
             ((opt_silent)) || printf '%s\n' "$resolved"
             found=1
           else
-            ((opt_silent)) || printf >&2 'which: error: Cannot resolve canonical path for %s\n' "${full_path@Q}"
+            error "Cannot resolve canonical path for ${full_path@Q}"
           fi
         else
           ((opt_silent)) || printf '%s\n' "$full_path"
