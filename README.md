@@ -124,20 +124,44 @@ PATH="/usr/bin:" whichx ./script   # Trailing colon
 
 ---
 
-## Development
+## Testing
 
 ```bash
-make test       # shellcheck validation
-shellcheck whichx
+make test         # shellcheck + functional tests (51 tests)
+make shellcheck   # shellcheck only
+make functional   # functional tests only
+make benchmark    # performance comparison vs old.which
 ```
 
-### Project Structure
+### Test Coverage
+
+- Basic operations, all options, combined options
+- Exit codes (0, 1, 2, 22)
+- POSIX PATH edge cases (leading/trailing/double colon)
+- Symlink resolution, broken symlinks
+- Non-executable files, directories
+
+### Benchmark (vs debianutils which)
+
+| Test | whichx | old.which |
+|------|--------|-----------|
+| Single lookup | ~600 ops/s | ~1200 ops/s |
+| Large PATH | ~500 ops/s | ~1200 ops/s |
+
+whichx is ~2x slower (bash vs dash) but sub-millisecond per operation.
+
+---
+
+## Project Structure
 
 ```
 whichx/
-├── whichx      # Main executable (~120 lines)
-├── whichx.1    # Man page
+├── whichx            # Main executable
+├── whichx.1          # Man page
 ├── Makefile
+├── tests/
+│   ├── test_whichx.sh  # 51 functional tests
+│   └── benchmark.sh    # Performance comparison
 ├── LICENSE
 └── README.md
 ```
