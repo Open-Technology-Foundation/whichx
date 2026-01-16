@@ -231,7 +231,7 @@ make benchmark
 ```bash
 make test         # shellcheck + functional tests
 make shellcheck   # Static analysis only
-make functional   # 51 functional tests only
+make functional   # 69 functional tests only
 ```
 
 ### Test Coverage
@@ -270,7 +270,7 @@ assert_contains "python" "$out" "description"
 ### Requirements
 
 - Must pass `shellcheck`
-- Must pass all 51 tests
+- Must pass all 69 tests
 - No new dependencies
 
 ### Pull Requests
