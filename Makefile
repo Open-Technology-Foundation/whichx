@@ -1,81 +1,44 @@
-# Makefile for which
+# Makefile - Install which
+# BCS1212 compliant
 
-PREFIX ?= /usr/local
-BINDIR = $(PREFIX)/bin
-MANDIR = $(PREFIX)/share/man/man1
-PROFILED = /etc/profile.d
-SCRIPT = which
-MANPAGE = which.1
+PREFIX  ?= /usr/local
+BINDIR  ?= $(PREFIX)/bin
+MANDIR  ?= $(PREFIX)/share/man/man1
+DESTDIR ?=
 
-.PHONY: all help check-bash install uninstall install-sourceable uninstall-sourceable test shellcheck functional benchmark
-
-BASH_MIN := 4.4
+.PHONY: all install uninstall check test help
 
 all: help
 
-check-bash:
-	@bash -c 'ver="$${BASH_VERSINFO[0]}.$${BASH_VERSINFO[1]}"; \
-	  if [[ "$$ver" < "$(BASH_MIN)" ]]; then \
-	    echo "Error: Bash $(BASH_MIN)+ required (found $$ver)"; exit 1; \
-	  fi'
-
-help:
-	@echo "which Makefile targets:"
-	@echo "  make install            - Install which and manpage to $(PREFIX)"
-	@echo "  make uninstall          - Remove which and manpage"
-	@echo "  make install-sourceable - Install to /etc/profile.d (12x faster)"
-	@echo "  make uninstall-sourceable - Remove from /etc/profile.d"
-	@echo "  make test               - Run shellcheck + functional tests"
-	@echo "  make shellcheck         - Run shellcheck only"
-	@echo "  make functional         - Run functional tests only"
-	@echo "  make benchmark          - Run performance benchmarks"
-	@echo ""
-	@echo "Variables:"
-	@echo "  PREFIX=$(PREFIX)  - Installation prefix (default: /usr/local)"
-
-install: check-bash
-	@echo "Installing $(SCRIPT) to $(BINDIR)..."
-	install -d $(BINDIR)
-	install -m 755 $(SCRIPT) $(BINDIR)/$(SCRIPT)
-	@echo "Installing manpage to $(MANDIR)..."
-	install -d $(MANDIR)
-	install -m 644 $(MANPAGE) $(MANDIR)/$(MANPAGE)
-	@echo "Installation complete."
-	@echo "  $(BINDIR)/$(SCRIPT)"
-	@echo "  $(MANDIR)/$(MANPAGE)"
+install:
+	install -d $(DESTDIR)$(BINDIR)
+	install -m 755 which $(DESTDIR)$(BINDIR)/which
+	install -d $(DESTDIR)$(MANDIR)
+	install -m 644 which.1 $(DESTDIR)$(MANDIR)/which.1
+	@if [ -z "$(DESTDIR)" ]; then $(MAKE) --no-print-directory check; fi
 
 uninstall:
-	@echo "Uninstalling $(SCRIPT) from $(BINDIR)..."
-	rm -f $(BINDIR)/$(SCRIPT)
-	@echo "Uninstalling manpage from $(MANDIR)..."
-	rm -f $(MANDIR)/$(MANPAGE)
-	@echo "Uninstallation complete."
+	rm -f $(DESTDIR)$(BINDIR)/which
+	rm -f $(DESTDIR)$(MANDIR)/which.1
 
-install-sourceable: check-bash
-	@echo "Installing $(SCRIPT) to $(PROFILED)/which.sh..."
-	install -d $(PROFILED)
-	install -m 644 $(SCRIPT) $(PROFILED)/which.sh
-	@echo "Installation complete: $(PROFILED)/which.sh"
-	@echo "New shells will have which() function (12x faster)"
+check:
+	@[ -x $(PREFIX)/bin/which ] \
+	  && echo 'which: OK ($(PREFIX)/bin/which)' \
+	  || echo 'which: NOT FOUND in $(PREFIX)/bin'
 
-uninstall-sourceable:
-	@echo "Removing which.sh from $(PROFILED)..."
-	rm -f $(PROFILED)/which.sh
-	@echo "Uninstallation complete."
+test:
+	./tests/test_which.sh
 
-test: shellcheck functional
-
-shellcheck:
-	@echo "Running shellcheck..."
-	shellcheck $(SCRIPT) tests/*.sh
-	@echo "Shellcheck passed."
-
-functional:
-	@echo "Running functional tests..."
-	@chmod +x tests/test_which.sh
-	@./tests/test_which.sh
-
-benchmark:
-	@echo "Running benchmarks..."
-	@chmod +x tests/benchmark.sh
-	@./tests/benchmark.sh
+help:
+	@echo 'Usage: make [target]'
+	@echo ''
+	@echo 'Targets:'
+	@echo '  install     Install to $(PREFIX)'
+	@echo '  uninstall   Remove installed files'
+	@echo '  check       Verify installation'
+	@echo '  test        Run test suite'
+	@echo '  help        Show this message'
+	@echo ''
+	@echo 'Install from GitHub:'
+	@echo '  git clone https://github.com/Open-Technology-Foundation/whichx.git'
+	@echo '  cd whichx && sudo make install'
