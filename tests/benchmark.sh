@@ -116,11 +116,11 @@ run_benchmarks() {
   ow_ms=$(benchmark $iters "$OLDWHICH" nonexistent_command_xyz)
   result "Not found" "$wx_ms" "$ow_ms" "$iters"
 
-  # Test 6: Quiet mode (which only, compare -s vs normal)
+  # Test 6: Silent mode (which only, compare -s vs normal)
   iters=1000
-  wx_ms=$(benchmark $iters "$WHICH" -q ls)
+  wx_ms=$(benchmark $iters "$WHICH" -s ls)
   ow_ms=$(benchmark $iters "$WHICH" ls)
-  result "-q vs normal (which)" "$wx_ms" "$ow_ms" "$iters"
+  result "-s vs normal (which)" "$wx_ms" "$ow_ms" "$iters"
 
   echo "#"
   echo "# Notes:"

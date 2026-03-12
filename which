@@ -1,61 +1,56 @@
-#!/usr/bin/env bash
+#!/usr/bin/bash
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2025-2026 Indonesian Open Technology Foundation (admin@yatti.id)
 # which - locate executables in PATH (script or sourceable function)
 # Usage: which -h
-# Usage: source which && which -h
 
 which() {
-  local -r VERSION=2.0
-
-  local -i opt_all=0 opt_canonical=0 opt_silent=0
-  local -i overall_rc=0 found=0
+  local -i allmatches=0 canonical=0 silent=0 allret=0 found=0
   local -a targets=() path_dirs=()
-  local -- target path full_path resolved path_str
+  local -- target path full_path resolved
 
   _which_help() {
-    cat <<HELP
-which $VERSION - Locate executables in PATH
+    cat <<'HELP'
+which 2.0 - Locate executables in PATH
 
 Usage: which [OPTIONS] [--] command ...
 
 Options:
   -a, --all        Print all matches, not just first
-  -c, --canonical  Resolve symlinks via realpath/readlink
-  -q, --quiet      No output, exit code only
-  -s, --silent     Same as -q
+  -c, --canonical  Resolve symlinks via realpath
+  -s, --silent     No output, exit code only
   -V, --version    Print version
   -h, --help       This help
 
-Exit: 0=found, 1=not found, 2=no args, 22=bad option
+Exit: 0=found, 1=not found, 2=bad option
 HELP
   }
 
-  _error() { ((opt_silent)) || >&2 printf 'which: error: %s\n' "$*"; }
-
   while (($#)); do
     case $1 in
-      -a|--all)       opt_all=1 ;;
-      -c|--canonical) opt_canonical=1 ;;
-      -q|--quiet|-s|--silent)
-                      opt_silent=1 ;;
-      -V|--version)   printf 'which %s\n' "$VERSION"
+      -a|--all)       allmatches=1 ;;
+      -c|--canonical) canonical=1 ;;
+      -s|--silent)    silent=1 ;;
+      -V|--version)   printf 'which 2.0\n'
                       return 0 ;;
       -h|--help)      _which_help
                       return 0 ;;
       --)             shift; targets+=("$@"); break ;;
-      -[acqsVh]?*)    set -- "${1:0:2}" "-${1:2}" "${@:2}"; continue ;;
-      -*)             _error "Illegal option ${1@Q}"
-                      return 22 ;;
+      # Split combined short options: -ac → -a -c
+      -[acsVh]?*)     set -- "${1:0:2}" "-${1:2}" "${@:2}"; continue ;;
+      -*)             >&2 printf 'Illegal option %s\n' "${1@Q}"
+                      return 2 ;;
       *)              targets+=("$1") ;;
     esac
     shift
   done
 
-  if ((!${#targets[@]})); then
-    _error 'No arguments. See which --help'
-    return 2
-  fi
+  ((${#targets[@]})) || return 1
+
+  # POSIX: trailing colon means current directory — guard for read -ra
+  local _path="${PATH:-}"
+  [[ $_path == *: ]] && _path+=':'
+  IFS=':' read -ra path_dirs <<< "$_path"
 
   for target in "${targets[@]}"; do
     found=0
@@ -63,56 +58,49 @@ HELP
     # Paths containing / bypass PATH search
     if [[ $target == */* ]]; then
       if [[ -f "$target" && -x "$target" ]]; then
-        if ((opt_canonical)); then
-          if resolved=$(realpath -- "$target" 2>/dev/null) || \
-             resolved=$(readlink -f -- "$target" 2>/dev/null); then
-            ((opt_silent)) || printf '%s\n' "$resolved"
+        if ((canonical)); then
+          if resolved=$(realpath -- "$target" 2>/dev/null); then
+            ((silent)) || printf '%s\n' "$resolved"
             found=1
           else
-            _error "Cannot resolve canonical path for ${target@Q}"
+            ((silent)) || >&2 printf 'Cannot resolve canonical path for %s\n' "${target@Q}"
           fi
         else
-          ((opt_silent)) || printf '%s\n' "$target"
+          ((silent)) || printf '%s\n' "$target"
           found=1
         fi
       fi
-      ((found)) || overall_rc=1
+      ((found)) || allret=1
       continue
     fi
 
-    # Search PATH
-    path_str=${PATH:-}
-    if [[ $path_str == *: ]]; then
-      path_str+='.'
-    fi
-    IFS=':' read -ra path_dirs <<< "$path_str"
-
     for path in "${path_dirs[@]}"; do
+      # POSIX: empty PATH element means current directory
       [[ -n $path ]] || path='.'
-      full_path="${path%/}/$target"
+      full_path="${path%/}"/"$target"
 
       if [[ -f "$full_path" && -x "$full_path" ]]; then
-        if ((opt_canonical)); then
-          if resolved=$(realpath -- "$full_path" 2>/dev/null) || \
-             resolved=$(readlink -f -- "$full_path" 2>/dev/null); then
-            ((opt_silent)) || printf '%s\n' "$resolved"
+        if ((canonical)); then
+          if resolved=$(realpath -- "$full_path" 2>/dev/null); then
+            ((silent)) || printf '%s\n' "$resolved"
             found=1
           else
-            _error "Cannot resolve canonical path for ${full_path@Q}"
+            ((silent)) || >&2 printf 'Cannot resolve canonical path for %s\n' "${full_path@Q}"
           fi
         else
-          ((opt_silent)) || printf '%s\n' "$full_path"
+          ((silent)) || printf '%s\n' "$full_path"
           found=1
         fi
-        ((opt_all)) || break
+        ((allmatches)) || break
       fi
     done
 
-    ((found)) || overall_rc=1
+    ((found)) || allret=1
   done
 
-  return "$overall_rc"
+  return "$allret"
 }
+# Export function to subshells (supports: source which && bash -c 'which ls')
 declare -fx which
 
 [[ ${BASH_SOURCE[0]} == "$0" ]] || return 0

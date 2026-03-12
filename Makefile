@@ -6,7 +6,7 @@ BINDIR  ?= $(PREFIX)/bin
 MANDIR  ?= $(PREFIX)/share/man/man1
 DESTDIR ?=
 
-.PHONY: all install uninstall check test help
+.PHONY: all install uninstall check test test-posix test-compat test-all help
 
 all: help
 
@@ -29,6 +29,14 @@ check:
 test:
 	./tests/test_which.sh
 
+test-posix:
+	/bin/sh ./tests/test_which_posix.sh
+
+test-compat:
+	./tests/test_compat.sh
+
+test-all: test test-posix test-compat
+
 help:
 	@echo 'Usage: make [target]'
 	@echo ''
@@ -36,7 +44,10 @@ help:
 	@echo '  install     Install to $(PREFIX)'
 	@echo '  uninstall   Remove installed files'
 	@echo '  check       Verify installation'
-	@echo '  test        Run test suite'
+	@echo '  test        Run Bash test suite'
+	@echo '  test-posix  Run POSIX test suite'
+	@echo '  test-compat Run compatibility tests vs Debian legacy'
+	@echo '  test-all    Run all test suites'
 	@echo '  help        Show this message'
 	@echo ''
 	@echo 'Install from GitHub:'

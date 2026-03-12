@@ -72,6 +72,17 @@ setup() {
   printf '#!/bin/sh\necho hyphen' > "$TESTDIR/bin1/-hyphen"
   chmod +x "$TESTDIR/bin1/-hyphen"
 
+  # Directory with spaces in name
+  mkdir -p "$TESTDIR/bin with spaces"
+  cp "$TESTDIR/bin1/testcmd" "$TESTDIR/bin with spaces/testcmd"
+
+  # Absolute symlink for -c slash path testing
+  ln -s "$TESTDIR/bin1/testcmd" "$TESTDIR/symlink_abs"
+
+  # Special character command
+  printf '#!/bin/sh\necho special' > "$TESTDIR/bin1/test+cmd"
+  chmod +x "$TESTDIR/bin1/test+cmd"
+
   TESTPATH="$TESTDIR/bin1:$TESTDIR/bin2:$TESTDIR/bin3:/usr/bin:/bin"
 }
 
@@ -133,24 +144,20 @@ run_tests() {
   out=$(PATH="$TESTPATH" "$WHICH" --canonical symcmd 2>&1); rc=$?
   assert_exit 0 $rc "opt: --canonical works"
 
-  # -q / --quiet
-  out=$(PATH="$TESTPATH" "$WHICH" -q testcmd 2>&1); rc=$?
-  assert_exit 0 $rc "opt: -q returns 0 when found"
-  assert_empty "$out" "opt: -q produces no output"
-
-  out=$(PATH="$TESTPATH" "$WHICH" -q nonexistent 2>&1); rc=$?
-  assert_exit 1 $rc "opt: -q returns 1 when not found"
-
-  out=$(PATH="$TESTPATH" "$WHICH" --quiet testcmd 2>&1); rc=$?
-  assert_empty "$out" "opt: --quiet produces no output"
-
-  # -s / --silent (alias)
+  # -s returns correct exit codes
   out=$(PATH="$TESTPATH" "$WHICH" -s testcmd 2>&1); rc=$?
-  assert_exit 0 $rc "opt: -s works"
-  assert_empty "$out" "opt: -s produces no output"
+  assert_exit 0 $rc "opt: -s returns 0 when found"
+  assert_empty "$out" "opt: -s produces no output (found)"
+
+  out=$(PATH="$TESTPATH" "$WHICH" -s nonexistent 2>&1); rc=$?
+  assert_exit 1 $rc "opt: -s returns 1 when not found"
 
   out=$(PATH="$TESTPATH" "$WHICH" --silent testcmd 2>&1); rc=$?
-  assert_empty "$out" "opt: --silent works"
+  assert_empty "$out" "opt: --silent produces no output"
+
+  # -q is not a valid option (removed in 2.0)
+  out=$(PATH="$TESTPATH" "$WHICH" -q testcmd 2>&1); rc=$?
+  assert_exit 2 $rc "opt: -q is invalid option"
 
   # -V / --version
   out=$("$WHICH" -V 2>&1); rc=$?
@@ -173,12 +180,12 @@ run_tests() {
   out=$(PATH="$TESTPATH" "$WHICH" -ac symcmd 2>&1); rc=$?
   assert_exit 0 $rc "opt: -ac combined works"
 
-  out=$(PATH="$TESTPATH" "$WHICH" -qa testcmd 2>&1); rc=$?
-  assert_exit 0 $rc "opt: -qa combined works"
-  assert_empty "$out" "opt: -qa still quiet"
+  out=$(PATH="$TESTPATH" "$WHICH" -sa testcmd 2>&1); rc=$?
+  assert_exit 0 $rc "opt: -sa combined works"
+  assert_empty "$out" "opt: -sa still silent"
 
-  out=$(PATH="$TESTPATH" "$WHICH" -aqs testcmd 2>&1); rc=$?
-  assert_exit 0 $rc "opt: -aqs triple combined"
+  out=$(PATH="$TESTPATH" "$WHICH" -as testcmd 2>&1); rc=$?
+  assert_exit 0 $rc "opt: -as combined works"
 
   # --- EXIT CODES ---
   echo "# Exit codes"
@@ -190,13 +197,13 @@ run_tests() {
   assert_exit 1 $rc "exit: 1 when not found"
 
   "$WHICH" 2>/dev/null; rc=$?
-  assert_exit 2 $rc "exit: 2 when no args"
+  assert_exit 1 $rc "exit: 1 when no args"
 
   "$WHICH" -z 2>/dev/null; rc=$?
-  assert_exit 22 $rc "exit: 22 for invalid option"
+  assert_exit 2 $rc "exit: 2 for invalid option"
 
   "$WHICH" --badopt 2>/dev/null; rc=$?
-  assert_exit 22 $rc "exit: 22 for invalid long option"
+  assert_exit 2 $rc "exit: 2 for invalid long option"
 
   # --- PATH HANDLING ---
   echo "# PATH handling"
@@ -276,6 +283,106 @@ run_tests() {
   out=$(PATH="$TESTPATH" "$WHICH" brokensym 2>&1); rc=$?
   assert_exit 1 $rc "edge: broken symlink not found (not executable)"
 
+  # --- EXTENDED COVERAGE ---
+  echo "# Extended coverage"
+
+  # Error message on stderr for invalid option
+  out=$("$WHICH" -z 2>&1 >/dev/null); rc=$?
+  assert_contains "Illegal option" "$out" "ext: invalid option shows Illegal option on stderr"
+
+  # No-args produces no stdout
+  out=$("$WHICH" 2>/dev/null); rc=$?
+  assert_empty "$out" "ext: no-args produces no output"
+
+  # Spaces in PATH directory name
+  out=$(PATH="$TESTDIR/bin with spaces:/usr/bin" "$WHICH" testcmd 2>&1); rc=$?
+  assert_exit 0 $rc "ext: spaces in PATH directory"
+  assert_contains "bin with spaces/testcmd" "$out" "ext: spaces in PATH output correct"
+
+  # -c with absolute symlink slash path
+  out=$("$WHICH" -c "$TESTDIR/symlink_abs" 2>&1); rc=$?
+  assert_exit 0 $rc "ext: -c with absolute symlink path"
+  assert_contains "testcmd" "$out" "ext: -c resolves absolute symlink"
+
+  # -c broken symlink via slash path returns 1
+  out=$("$WHICH" -c "$TESTDIR/bin1/brokensym" 2>&1); rc=$?
+  assert_exit 1 $rc "ext: -c broken symlink via slash path returns 1"
+
+  # -a output ordering: first match from bin1
+  out=$(PATH="$TESTDIR/bin1:$TESTDIR/bin2" "$WHICH" -a testcmd 2>&1); rc=$?
+  local first_line
+  first_line=$(echo "$out" | head -n1)
+  assert_contains "$TESTDIR/bin1" "$first_line" "ext: -a first match from first PATH entry"
+
+  # -a output ordering: second match from bin2
+  local second_line
+  second_line=$(echo "$out" | sed -n '2p')
+  assert_contains "$TESTDIR/bin2" "$second_line" "ext: -a second match from second PATH entry"
+
+  # -a shows duplicate PATH entries
+  out=$(PATH="$TESTDIR/bin1:$TESTDIR/bin1" "$WHICH" -a testcmd 2>&1); rc=$?
+  lines=$(echo "$out" | wc -l)
+  if [[ $lines -ge 2 ]]; then ok "ext: -a shows duplicate PATH entries"; else not_ok "ext: -a shows duplicate PATH entries (got $lines)"; fi
+
+  # Very long target name handled
+  local longname
+  longname=$(printf 'a%.0s' {1..200})
+  out=$(PATH="$TESTPATH" "$WHICH" "$longname" 2>&1); rc=$?
+  assert_exit 1 $rc "ext: very long target name handled"
+
+  # -- prevents -a being parsed as option
+  out=$(PATH="$TESTPATH" "$WHICH" -- -a 2>&1); rc=$?
+  assert_exit 1 $rc "ext: -- prevents -a being parsed as option"
+
+  # -- prevents -V being parsed
+  out=$(PATH="$TESTPATH" "$WHICH" -- -V 2>&1); rc=$?
+  assert_exit 1 $rc "ext: -- prevents -V being parsed as option"
+
+  # -- with multiple targets
+  out=$(PATH="$TESTPATH" "$WHICH" -- testcmd testcmd 2>&1); rc=$?
+  assert_exit 0 $rc "ext: -- with multiple targets"
+
+  # Symlink found without -c (not resolved)
+  out=$(PATH="$TESTPATH" "$WHICH" symcmd 2>&1); rc=$?
+  assert_exit 0 $rc "ext: symlink found without -c"
+  assert_contains "symcmd" "$out" "ext: symlink not resolved without -c"
+
+  # Executable in trailing-slash dir (path/)
+  out=$(PATH="$TESTDIR/bin1/:/usr/bin" "$WHICH" testcmd 2>&1); rc=$?
+  assert_exit 0 $rc "ext: executable in trailing-slash dir"
+
+  # Target with special chars (test+cmd)
+  out=$(PATH="$TESTPATH" "$WHICH" "test+cmd" 2>&1); rc=$?
+  assert_exit 0 $rc "ext: target with special chars"
+
+  # Single target repeated (which ls ls)
+  out=$("$WHICH" ls ls 2>&1); rc=$?
+  assert_exit 0 $rc "ext: single target repeated"
+  lines=$(echo "$out" | wc -l)
+  if [[ $lines -ge 2 ]]; then ok "ext: repeated target shows multiple lines"; else not_ok "ext: repeated target shows multiple lines (got $lines)"; fi
+
+  # -a with single match only
+  out=$(PATH="$TESTDIR/bin1" "$WHICH" -a testcmd 2>&1); rc=$?
+  assert_exit 0 $rc "ext: -a with single match"
+  lines=$(echo "$out" | wc -l)
+  assert_output "1" "$lines" "ext: -a with single match only shows 1 line"
+
+  # -s with nonexistent + stderr check
+  out=$(PATH="$TESTPATH" "$WHICH" -s nonexistent 2>&1); rc=$?
+  assert_exit 1 $rc "ext: -s nonexistent returns 1"
+  assert_empty "$out" "ext: -s suppresses all output for nonexistent"
+
+  # -ac combined on symlink
+  out=$(PATH="$TESTDIR/bin1:$TESTDIR/bin2:/usr/bin" "$WHICH" -ac symcmd 2>&1); rc=$?
+  assert_exit 0 $rc "ext: -ac combined on symlink"
+  assert_contains "testcmd" "$out" "ext: -ac resolves symlink"
+
+  # PATH with relative dir (../bin)
+  pushd "$TESTDIR/bin2" >/dev/null || return 1
+  out=$(PATH="../bin1:/usr/bin" "$WHICH" testcmd 2>&1); rc=$?
+  assert_exit 0 $rc "ext: PATH with relative dir"
+  popd >/dev/null || return 1
+
   # --- SOURCED MODE ---
   echo "# Sourced mode"
 
@@ -293,10 +400,10 @@ run_tests() {
   out=$(bash -c "source '$WHICH' && PATH='$TESTPATH' which -a testcmd 2>&1"); rc=$?
   assert_exit 0 $rc "sourced: -a works"
 
-  # Options work: -q
-  out=$(bash -c "source '$WHICH' && which -q ls 2>&1"); rc=$?
-  assert_exit 0 $rc "sourced: -q works"
-  assert_empty "$out" "sourced: -q no output"
+  # Options work: -s
+  out=$(bash -c "source '$WHICH' && which -s ls 2>&1"); rc=$?
+  assert_exit 0 $rc "sourced: -s works"
+  assert_empty "$out" "sourced: -s no output"
 
   # Options work: -V
   out=$(bash -c "source '$WHICH' && which -V 2>&1"); rc=$?

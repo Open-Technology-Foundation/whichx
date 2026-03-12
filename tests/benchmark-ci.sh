@@ -39,7 +39,7 @@ else
   printf '%-25s %12d\n' "Single lookup (${iters}x)" "$wx"
 fi
 
-wx=$(benchmark $iters "$WHICH" -q ls)
+wx=$(benchmark $iters "$WHICH" -s ls)
 if [[ -n "$LEGACY" ]]; then
   deb=$(benchmark $iters "$LEGACY" -s ls)
   printf '%-25s %12d %12d\n' "Silent mode (${iters}x)" "$wx" "$deb"

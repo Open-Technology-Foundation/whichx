@@ -19,7 +19,7 @@ strictly POSIX-conformant shell. It searches the
 environment variable for executable files matching the names of the arguments.
 .SS Key Features
 .IP \(bu 2
-Predictable exit codes (0, 1, 2, 22) for reliable scripting
+Predictable exit codes (0, 1, 2) for reliable scripting
 .IP \(bu 2
 Canonical path resolution to follow symlinks
 .IP \(bu 2
@@ -45,12 +45,9 @@ Resolve symlinks and print canonical paths using
 This resolves all symbolic links and relative path components to show
 the actual executable location.
 .TP
-.BR \-q ", " \-\-quiet
-Quiet mode. Suppress all output; communicate via exit code only.
-Useful for conditional checks in scripts.
-.TP
 .BR \-s ", " \-\-silent
-Silent mode. Same as \-q.
+Silent mode. Suppress all output; communicate via exit code only.
+Useful for conditional checks in scripts.
 .TP
 .BR \-V ", " \-\-version
 Print version information and exit.
@@ -72,10 +69,7 @@ All specified commands found successfully.
 .B 1 (EXIT_NOT_FOUND)
 One or more commands not found.
 .TP
-.B 2 (EXIT_USAGE_ERROR)
-Usage error (no arguments provided).
-.TP
-.B 22 (EXIT_INVALID_OPTION / EINVAL)
+.B 2 (EXIT_INVALID_OPTION)
 Invalid command-line option.
 .SH EXAMPLES
 .SS Basic Usage
@@ -130,18 +124,18 @@ $ which \-ac python3
 /usr/local/bin/python3.11
 .fi
 .RE
-.SS Silent Mode (\-q/\-s)
+.SS Silent Mode (\-s)
 Use in scripts for conditional checks:
 .PP
 .RS
 .nf
 # Simple conditional
-if which \-q docker; then
+if which \-s docker; then
     echo "Docker is available"
 fi
 
 # Pre-flight dependency check
-which \-q gcc make cmake || {
+which \-s gcc make cmake || {
     echo "Missing build tools" >&2
     exit 1
 }
