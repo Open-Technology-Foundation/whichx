@@ -1,6 +1,6 @@
 # Project Insights
 
-This project has 25 harvested insights from previous sessions.
+This project has 30 harvested insights from previous sessions.
 When a task relates to a topic below, read the insight file for context.
 
 - [architecture-001](.claude/insights/architecture-001.md) — Behavioral superset strategy for Debian compatibility
@@ -21,6 +21,10 @@ When a task relates to a topic below, read the insight file for context.
 - [bash-015](.claude/insights/bash-015.md) — POSIX sh portability and glob safety in which
 - [bash-016](.claude/insights/bash-016.md) — POSIX sh IFS splitting loses trailing empty fields
 - [bash-017](.claude/insights/bash-017.md) — Bash IFS read drops trailing empty fields from here-strings
+- [bash-018](.claude/insights/bash-018.md) — Handle trailing colons in IFS-split PATH variables
+- [bash-019](.claude/insights/bash-019.md) — Custom PATH must include utilities called within scripts
+- [bash-020](.claude/insights/bash-020.md) — Bash read -ra trailing empty fields and compatibility testing
+- [bash-021](.claude/insights/bash-021.md) — Behavioral parity achieved with cosmetic output differences
 - [general-001](.claude/insights/general-001.md) — Exit code alignment between implementation and documentation
 - [general-002](.claude/insights/general-002.md) — Exit code alignment:** The code already returns 1 for no-args (matching debia...
 - [general-003](.claude/insights/general-003.md) — - **`#!/usr/bin/bash` vs `#!/usr/bin/env bash`**: The `env` form searches PAT...
@@ -28,4 +32,5 @@ When a task relates to a topic below, read the insight file for context.
 - [git-001](.claude/insights/git-001.md) — View untracked files with git diff --no-index
 - [security-001](.claude/insights/security-001.md) — Absolute paths more secure than PATH hardening
 - [system-001](.claude/insights/system-001.md) — Debian Essential Package Constraints Require Alternatives System
+- [system-002](.claude/insights/system-002.md) — File permissions inheritance setgid parent constraints
 
