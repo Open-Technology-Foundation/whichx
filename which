@@ -3,11 +3,12 @@
 # Copyright (C) 2025-2026 Indonesian Open Technology Foundation (admin@yatti.id)
 # which - locate executables in PATH (script or sourceable function)
 # Usage: which -h
+#shellcheck disable=SC2317 # False positive line 103
 
 which() {
   local -i allmatches=0 canonical=0 silent=0 allret=0 found=0
   local -a targets=() path_dirs=()
-  local -- target path full_path resolved
+  local target path full_path resolved
 
   _which_help() {
     cat <<'HELP'
@@ -31,15 +32,12 @@ HELP
       -a|--all)       allmatches=1 ;;
       -c|--canonical) canonical=1 ;;
       -s|--silent)    silent=1 ;;
-      -V|--version)   printf 'which 2.0\n'
-                      return 0 ;;
-      -h|--help)      _which_help
-                      return 0 ;;
+      -V|--version)   printf 'which 2.0\n'; return 0 ;;
+      -h|--help)      _which_help; return 0 ;;
       --)             shift; targets+=("$@"); break ;;
       # Split combined short options: -ac → -a -c
       -[acsVh]?*)     set -- "${1:0:2}" "-${1:2}" "${@:2}"; continue ;;
-      -*)             >&2 printf 'Illegal option %s\n' "${1@Q}"
-                      return 2 ;;
+      -*)             >&2 printf 'Illegal option %s\n' "${1@Q}"; return 2 ;;
       *)              targets+=("$1") ;;
     esac
     shift
@@ -48,16 +46,15 @@ HELP
   ((${#targets[@]})) || return 1
 
   # POSIX: trailing colon means current directory — guard for read -ra
-  local _path="${PATH:-}"
-  [[ $_path == *: ]] && _path+=':'
+  local _path=${PATH:-}
+  [[ $_path != *: ]] || _path+=':'
   IFS=':' read -ra path_dirs <<< "$_path"
 
   for target in "${targets[@]}"; do
     found=0
-
     # Paths containing / bypass PATH search
     if [[ $target == */* ]]; then
-      if [[ -f "$target" && -x "$target" ]]; then
+      if [[ -f $target && -x $target ]]; then
         if ((canonical)); then
           if resolved=$(realpath -- "$target" 2>/dev/null); then
             ((silent)) || printf '%s\n' "$resolved"
@@ -79,7 +76,7 @@ HELP
       [[ -n $path ]] || path='.'
       full_path="${path%/}"/"$target"
 
-      if [[ -f "$full_path" && -x "$full_path" ]]; then
+      if [[ -f $full_path && -x $full_path ]]; then
         if ((canonical)); then
           if resolved=$(realpath -- "$full_path" 2>/dev/null); then
             ((silent)) || printf '%s\n' "$resolved"
@@ -98,16 +95,17 @@ HELP
     ((found)) || allret=1
   done
 
-  return "$allret"
+  return $allret
 }
-# Export function to subshells (supports: source which && bash -c 'which ls')
+# Export function to subshells
 declare -fx which
 
-[[ ${BASH_SOURCE[0]} == "$0" ]] || return 0
+# --- source fence ---
+return 0 2>/dev/null || {
+  # --- direct execution ---
+  set -euo pipefail
+  shopt -s inherit_errexit
+  which "$@"
+}
 
-# --- Script mode (direct execution only) ---
-set -euo pipefail
-shopt -s inherit_errexit shift_verbose
-
-which "$@"
-#fin
+#end
