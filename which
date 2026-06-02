@@ -7,11 +7,13 @@
 # Exit: 0=found, 1=not found or no args, 2=invalid option. See 'which -h'.
 #shellcheck disable=SC2317 # False positive on which "$@" in the source fence
 
-# Require Bash 4.4+ (uses ${var@Q} and shopt -s inherit_errexit)
-if ((BASH_VERSINFO[0] < 4 || (BASH_VERSINFO[0] == 4 && BASH_VERSINFO[1] < 4))); then
-  >&2 printf 'which: requires Bash 4.4 or newer\n'
+# Require Bash 4.4+ (uses ${var@Q} and shopt -s inherit_errexit). Inline per-
+# component check, not BCS0409's require_bash predicates: defining global helper
+# functions would leak them into every shell that sources this file.
+((BASH_VERSINFO[0] > 4 || (BASH_VERSINFO[0] == 4 && BASH_VERSINFO[1] >= 4))) || {
+  >&2 printf 'which: requires Bash >= 4.4 (have %s)\n' "${BASH_VERSION:-unknown}"
   return 2 2>/dev/null || exit 2
-fi
+}
 
 which() {
   local -r VERSION='2.0'
@@ -27,7 +29,7 @@ which() {
       -V|--version)   printf 'which %s\n' "$VERSION"; return 0 ;;
       -h|--help)
         cat <<HELP
-which ${VERSION} - Locate executables in PATH
+which $VERSION - Locate executables in PATH
 
 Usage: which [OPTIONS] [--] command ...
 
