@@ -4,7 +4,7 @@ A robust `which` for Bash 4.4+ — a drop-in replacement for the Debian (debianu
 
 [![License: GPL-3.0](https://img.shields.io/badge/License-GPL%203.0-blue.svg)](LICENSE)
 [![Bash 4.4+](https://img.shields.io/badge/Bash-4.4%2B-green.svg)](https://www.gnu.org/software/bash/)
-[![Tests: 199 passing](https://img.shields.io/badge/Tests-199%20passing-brightgreen.svg)](tests/)
+[![Tests: 201 passing](https://img.shields.io/badge/Tests-201%20passing-brightgreen.svg)](tests/)
 
 **Requires Bash 4.4+.**
 
@@ -260,10 +260,10 @@ bash tests/benchmark.sh
 ### Run Tests
 
 ```bash
-make test         # Bash functional suite (102 tests)
+make test         # Bash functional suite (104 tests)
 make test-posix   # POSIX /bin/sh suite (52 tests, for which.sh)
 make test-compat  # Parity vs debianutils which (45 tests)
-make test-all     # All of the above (199 tests)
+make test-all     # All of the above (201 tests)
 ```
 
 Static analysis is run directly with `shellcheck -x which`.
@@ -306,7 +306,7 @@ assert_contains "python" "$out" "description"
 ### Requirements
 
 - Must pass `shellcheck -x which`
-- Must pass `make test-all` (199 tests)
+- Must pass `make test-all` (201 tests)
 - No new dependencies
 
 ### Pull Requests

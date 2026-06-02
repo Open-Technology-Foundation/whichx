@@ -14,6 +14,7 @@ if ((BASH_VERSINFO[0] < 4 || (BASH_VERSINFO[0] == 4 && BASH_VERSINFO[1] < 4))); 
 fi
 
 which() {
+  local -r VERSION='2.0'
   local -i allmatches=0 canonical=0 silent=0 allret=0 found=0
   local -a targets=() path_dirs=()
   local -- target path full_path resolved
@@ -23,10 +24,10 @@ which() {
       -a|--all)       allmatches=1 ;;
       -c|--canonical) canonical=1 ;;
       -s|--silent)    silent=1 ;;
-      -V|--version)   printf 'which 2.0\n'; return 0 ;;
+      -V|--version)   printf 'which %s\n' "$VERSION"; return 0 ;;
       -h|--help)
-        cat <<'HELP'
-which 2.0 - Locate executables in PATH
+        cat <<HELP
+which ${VERSION} - Locate executables in PATH
 
 Usage: which [OPTIONS] [--] command ...
 
@@ -66,7 +67,7 @@ HELP
       if [[ -f $target && -x $target ]]; then
         if ((canonical)); then
           # Pin PATH so realpath cannot be hijacked by the PATH being searched
-          if resolved=$(PATH=/usr/bin:/bin realpath -- "$target" 2>/dev/null); then
+          if resolved=$(PATH=/usr/bin:/bin realpath -- "$target" 2>/dev/null) && [[ -n $resolved ]]; then
             ((silent)) || printf '%s\n' "$resolved"
             found=1
           else
@@ -84,12 +85,12 @@ HELP
     for path in "${path_dirs[@]}"; do
       # POSIX: empty PATH element means current directory
       [[ -n $path ]] || path='.'
-      full_path="${path%/}"/"$target"
+      full_path="$path/$target"
 
       if [[ -f $full_path && -x $full_path ]]; then
         if ((canonical)); then
           # Pin PATH so realpath cannot be hijacked by the PATH being searched
-          if resolved=$(PATH=/usr/bin:/bin realpath -- "$full_path" 2>/dev/null); then
+          if resolved=$(PATH=/usr/bin:/bin realpath -- "$full_path" 2>/dev/null) && [[ -n $resolved ]]; then
             ((silent)) || printf '%s\n' "$resolved"
             found=1
           else
@@ -121,4 +122,4 @@ return 0 2>/dev/null || {
   which "$@"
 }
 
-#end
+#fin

@@ -400,6 +400,11 @@ run_tests() {
   out=$(PATH="$TESTPATH" "$WHICH" testcmd -- 2>&1); rc=$?
   assert_exit 1 $rc "dropin: trailing -- after operand looked up as a name"
 
+  # Trailing-slash PATH element joins raw (double slash), matching debianutils byte-for-byte
+  out=$(PATH="$TESTDIR/bin1/:/usr/bin" "$WHICH" testcmd 2>&1); rc=$?
+  assert_exit 0 $rc "dropin: executable found via trailing-slash PATH element"
+  assert_contains "$TESTDIR/bin1//testcmd" "$out" "dropin: trailing-slash PATH joins raw (byte-parity)"
+
   # -c must not execute a PATH-supplied realpath (no hijack -> no arbitrary code exec)
   local hijackdir
   hijackdir=$(mktemp -d)
